@@ -1,0 +1,7 @@
+/.idea
+*.test
+*.prof
+*.swp
+*.swo
+.DS_Store
+._*
