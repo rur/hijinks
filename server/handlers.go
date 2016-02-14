@@ -1,10 +1,21 @@
 package server
 
 import (
-	"fmt"
+	"html/template"
+	"log"
 	"net/http"
 )
 
 func helloWorld(ctx server, w http.ResponseWriter, req *http.Request) {
-	fmt.Fprintf(w, "Hi there %s!", req.URL.Path)
+	t, err := template.ParseFiles(
+		ctx.fsRoot+"/assets/base.templ.html",
+		ctx.fsRoot+"/assets/about.templ.html",
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err := t.Execute(w, nil); err != nil {
+		log.Fatal(err)
+	}
 }
