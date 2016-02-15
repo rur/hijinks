@@ -1,2 +1,17 @@
-<title>{{block "title" .}}Default Title{{end}}</title>
-<body>{{block "content" .}}This is the default body.{{end}}</body>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  {{block "title" . -}}
+    <title>Default Title</title>
+  {{- end}}
+</head>
+<body>
+  {{block "content" . }}
+    <div id="the_content">This is the default </div>
+  {{end}}
+  {{block "footer" . }}
+    <footer id="the_footer">Default footer!</footer>
+  {{end}}
+</body>
+</html>

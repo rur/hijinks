@@ -35,7 +35,13 @@ func NewRootHandler(fsRoot string, sessionKey []byte) *RootHandler {
 	store := sessions.NewCookieStore(sessionKey)
 	server := server{router: r, url: handler.URL, fsRoot: fsRoot, store: store}
 
-	r.HandleFunc("/", server.handler(helloWorld)).
+	r.HandleFunc("/", server.handler(aboutPage)).
+		Methods("GET")
+
+	r.HandleFunc("/about", server.handler(aboutPartial)).
+		Methods("GET")
+
+	r.HandleFunc("/about/user", server.handler(aboutUserPage)).
 		Methods("GET")
 
 	return handler
