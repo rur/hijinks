@@ -8,8 +8,8 @@ import (
 
 func aboutPage(ctx server, w http.ResponseWriter, req *http.Request) {
 	t, err := template.ParseFiles(
-		ctx.fsRoot+"/assets/base.templ.html",
-		ctx.fsRoot+"/assets/about.templ.html",
+		"../assets/base.templ.html",
+		"../assets/about.templ.html",
 	)
 	if err != nil {
 		log.Fatal(err)
@@ -22,7 +22,7 @@ func aboutPage(ctx server, w http.ResponseWriter, req *http.Request) {
 
 func aboutPartial(ctx server, w http.ResponseWriter, req *http.Request) {
 	t, err := template.ParseFiles(
-		ctx.fsRoot + "/assets/about.templ.html",
+		"../assets/about.templ.html",
 	)
 	if err != nil {
 		log.Fatal(err)
@@ -35,9 +35,9 @@ func aboutPartial(ctx server, w http.ResponseWriter, req *http.Request) {
 
 func aboutUserPage(ctx server, w http.ResponseWriter, req *http.Request) {
 	t, err := template.ParseFiles(
-		ctx.fsRoot+"/assets/base.templ.html",
-		ctx.fsRoot+"/assets/about.templ.html",
-		ctx.fsRoot+"/assets/about-user.templ.html",
+		"../assets/base.templ.html",
+		"../assets/about.templ.html",
+		"../assets/about-user.templ.html",
 	)
 	if err != nil {
 		log.Fatal(err)
