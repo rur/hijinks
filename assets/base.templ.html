@@ -2,16 +2,15 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  {{block "title" . -}}
-    <title>Default Title</title>
-  {{- end}}
+  <title>Try out Go 1.6 template blocks</title>
 </head>
 <body>
-  {{block "content" . }}
-    <div id="the_content">This is the default </div>
+  <h1>Cons 1 data = {{.Data}}</h1>
+  {{block "sub" .Next }}
+    <div>sub default data = {{.Data}}</div>
   {{end}}
-  {{block "footer" . }}
-    <footer id="the_footer">Default footer!</footer>
+  {{block "sub_other" . }}
+    <div>sub_other default data = {{.Data}}</div>
   {{end}}
 </body>
 </html>

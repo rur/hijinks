@@ -6,44 +6,38 @@ import (
 	"net/http"
 )
 
-func aboutPage(ctx server, w http.ResponseWriter, req *http.Request) {
+type Cons struct {
+	Data int
+	Next *Cons
+}
+
+func fullPage(ctx server, w http.ResponseWriter, req *http.Request) {
 	t, err := template.ParseFiles(
 		"./assets/base.templ.html",
-		"./assets/about.templ.html",
+		"./assets/sub.templ.html",
 	)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if err := t.Execute(w, nil); err != nil {
+	d := Cons{1, &Cons{Data: 2}}
+
+	if err := t.Execute(w, d); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func aboutPartial(ctx server, w http.ResponseWriter, req *http.Request) {
+func pagePartial(ctx server, w http.ResponseWriter, req *http.Request) {
 	t, err := template.ParseFiles(
-		"./assets/about.templ.html",
+		"./assets/sub.templ.html",
 	)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if err := t.Execute(w, nil); err != nil {
-		log.Fatal(err)
-	}
-}
+	d := Cons{1, &Cons{Data: 2}}
 
-func aboutUserPage(ctx server, w http.ResponseWriter, req *http.Request) {
-	t, err := template.ParseFiles(
-		"./assets/base.templ.html",
-		"./assets/about.templ.html",
-		"./assets/about-user.templ.html",
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if err := t.Execute(w, nil); err != nil {
+	if err := t.Execute(w, d); err != nil {
 		log.Fatal(err)
 	}
 }
