@@ -1,4 +1,4 @@
-package server
+package demo_server
 
 import (
 	"github.com/gorilla/mux"

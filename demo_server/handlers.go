@@ -1,4 +1,4 @@
-package server
+package demo_server
 
 import (
 	"html/template"
