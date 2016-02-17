@@ -13,8 +13,8 @@ type Cons struct {
 
 func fullPage(ctx server, w http.ResponseWriter, req *http.Request) {
 	t, err := template.ParseFiles(
-		"./assets/base.templ.html",
-		"./assets/sub.templ.html",
+		ctx.fsRoot+"/assets/base.templ.html",
+		ctx.fsRoot+"/assets/sub.templ.html",
 	)
 	if err != nil {
 		log.Fatal(err)
@@ -29,7 +29,7 @@ func fullPage(ctx server, w http.ResponseWriter, req *http.Request) {
 
 func pagePartial(ctx server, w http.ResponseWriter, req *http.Request) {
 	t, err := template.ParseFiles(
-		"./assets/sub.templ.html",
+		ctx.fsRoot + "/assets/sub.templ.html",
 	)
 	if err != nil {
 		log.Fatal(err)

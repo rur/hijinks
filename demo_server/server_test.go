@@ -21,7 +21,7 @@ func TestServer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	handler := NewRootHandler(wd+"./..", []byte("12345678901234567890123456789012"))
+	handler := NewRootHandler(wd+"/..", []byte("12345678901234567890123456789012"))
 
 	server := httptest.NewUnstartedServer(handler)
 	server.Start()

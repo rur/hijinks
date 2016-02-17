@@ -5,7 +5,7 @@ import "net/http"
 type Template struct {
 	Name     string
 	Template string
-	Handler  HijinksHandler
+	Handler  *HijinksHandler
 	Children []Template
 }
 
@@ -34,5 +34,5 @@ type Renderer interface {
 	// generate a hander from a defined template
 	Handler(string) http.HandlerFunc
 	// create a sub renderer with a new configuration
-	Sub(*ConfigFunc) (Renderer, error)
+	Sub(...ConfigFunc) (Renderer, error)
 }
