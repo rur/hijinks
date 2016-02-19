@@ -5,4 +5,4 @@
 *.swo
 .DS_Store
 ._*
-local-scripts
+local_scripts

@@ -4,12 +4,14 @@ import "net/http"
 
 type hjResponseWriter struct {
 	http.ResponseWriter
-	template Template
+	template   Template
+	data       interface{}
+	dataCalled bool
 }
 
 func (w *hjResponseWriter) Data(d interface{}) {
-	// this should call the template files to be loaded and
-	// the output to be sent
+	w.data = d
+	w.dataCalled = true
 }
 
 func (w *hjResponseWriter) Delegate(n string) interface{} {

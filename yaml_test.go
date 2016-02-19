@@ -26,7 +26,7 @@ type testConf struct {
 	templates Templates
 }
 
-func (t *testConf) AddHandler(name string, fn *HijinksHandler) {
+func (t *testConf) AddHandler(name string, fn HijinksHandler) {
 	// do nothing for now!
 }
 

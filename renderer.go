@@ -5,7 +5,7 @@ import "net/http"
 type Template struct {
 	Name     string
 	Template string
-	Handler  *HijinksHandler
+	Handler  HijinksHandler
 	Children []Template
 }
 
@@ -13,7 +13,7 @@ type Templates map[string]Template
 
 type Configure interface {
 	// set the handler associated with a template
-	AddHandler(string, *HijinksHandler)
+	AddHandler(string, HijinksHandler)
 	// add a new template definition
 	AddTemplates(Templates)
 }

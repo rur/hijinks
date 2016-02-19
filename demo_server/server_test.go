@@ -11,7 +11,7 @@ import (
 
 // server integration tests
 func TestServer(t *testing.T) {
-	f, err := ioutil.TempFile("/tmp", "erickson")
+	f, err := ioutil.TempFile("/tmp", "hijinks")
 	if err != nil {
 		t.Fatal(err)
 	}
