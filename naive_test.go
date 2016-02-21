@@ -12,7 +12,7 @@ import (
 func TestNaiveRenderer_NilCase(t *testing.T) {
 	defer func() {
 		if r := recover(); r == nil {
-			t.Errorf("Without 'test' template defined the code should have panicked")
+			t.Fatal("r.Handler should panic since template is not defined")
 		}
 	}()
 
@@ -20,18 +20,7 @@ func TestNaiveRenderer_NilCase(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	req, err := http.NewRequest("GET", "http://example.com/foo", nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	w := httptest.NewRecorder()
-	r.Handler("test")(w, req)
-
-	if len(w.Body.String()) == 0 {
-		t.Fatal("Response has no body!")
-	}
+	r.Handler("not_defined")
 }
 
 func TestNaiveRenderer(t *testing.T) {
