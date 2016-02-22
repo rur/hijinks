@@ -2,6 +2,7 @@ package hijinks
 
 import (
 	"net/http"
+	"strings"
 )
 
 // Most stupid thing that might work
@@ -14,6 +15,9 @@ func (n *naiveImpl) Handler(name string) http.HandlerFunc {
 	// this should create two template instances,
 	// one for the template root and one for the partial
 	page, ok := n.pages[name]
+	if page.Extends != "" {
+		strings.Split(page.Extends, " > ")
+	}
 	templ := page.Template
 	if !ok {
 		panic("no pages found here!")
@@ -53,4 +57,13 @@ func (n *naiveImpl) AddPages(tls Pages) {
 func NewNaiveRenderer(c ...ConfigFunc) (Renderer, error) {
 	r := naiveImpl{}
 	return r.Sub(c...)
+}
+
+func expandTemplates(page *Page, path string) *[]Template {
+	var (
+		pages    []*Page
+		template []Template
+	)
+
+	strings.Split(path, " > ")
 }
