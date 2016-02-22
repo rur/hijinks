@@ -1,34 +1,27 @@
 package hijinks
 
 import (
-	"html/template"
-	"log"
 	"net/http"
 )
 
-// most stupid thing that might work
+// Most stupid thing that might work
+// implements both the Renderer and Configure interfaces
 type naiveImpl struct {
 	templates Templates
 }
 
 func (n *naiveImpl) Handler(name string) http.HandlerFunc {
+	// this should create two template instances,
+	// one for the template root and one for the partial
 	templ, ok := n.templates[name]
 	if !ok {
 		panic("no templates found here!")
 	}
 	return func(w http.ResponseWriter, r *http.Request) {
 		hw := hjResponseWriter{ResponseWriter: w, template: templ}
-		t, err := template.ParseFiles(templ.Template)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		templ.Handler(&hw, r)
-
-		if hw.dataCalled {
-			if err := t.Execute(w, hw.data); err != nil {
-				log.Fatal(err)
-			}
+		model, ok := hw.loadData(r)
+		if ok {
+			hw.executeTemplate(model)
 		}
 	}
 }

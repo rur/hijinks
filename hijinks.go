@@ -23,7 +23,7 @@ type ResponseWriter interface {
 	// render the template with the supplied data
 	Data(interface{})
 	// load data from specified child handler
-	Delegate(string) interface{}
+	Delegate(string, *http.Request) (interface{}, bool)
 }
 
 type HijinksHandler func(ResponseWriter, *http.Request)
