@@ -17,19 +17,35 @@ func TestRenderYaml(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if c.templates == nil {
-		t.Error("No templates parsed")
+	if c.pages == nil {
+		t.Error("No pages parsed")
+	}
+
+	if c.pages["settings"].Extends != "base > content" {
+		t.Error("Failed to parse 'extends' field")
+	}
+
+	if c.pages["base"].Name != "base" {
+		t.Errorf("Base Name not defined: %v", c.pages["base"].Name)
+	}
+
+	if c.pages["base"].File != "base.templ.html" {
+		t.Errorf("Base file not defined: %v", c.pages["base"].File)
+	}
+
+	if len(c.pages["base"].Children) == 0 {
+		t.Errorf("Failed to parse children %#v", c.pages["base"].Children)
 	}
 }
 
 type testConf struct {
-	templates Templates
+	pages Pages
 }
 
 func (t *testConf) AddHandler(name string, fn HijinksHandler) {
 	// do nothing for now!
 }
 
-func (t *testConf) AddTemplates(tmpl Templates) {
-	t.templates = tmpl
+func (t *testConf) AddPages(p Pages) {
+	t.pages = p
 }

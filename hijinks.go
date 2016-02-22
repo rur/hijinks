@@ -4,18 +4,23 @@ import "net/http"
 
 type Template struct {
 	Name     string
-	Template string
+	File     string
 	Handler  HijinksHandler
 	Children []Template
 }
 
-type Templates map[string]Template
+type Page struct {
+	Template
+	Extends string
+}
+
+type Pages map[string]Page
 
 type Configure interface {
 	// set the handler associated with a template
 	AddHandler(string, HijinksHandler)
 	// add a new template definition
-	AddTemplates(Templates)
+	AddPages(Pages)
 }
 
 type ResponseWriter interface {

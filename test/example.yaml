@@ -1,65 +1,65 @@
 
 base:
-    template: base.templ.html
+    file: base.templ.html
     children:
         - name: title
-          template: title.templ.html
+          file: title.templ.html
           children:
             - name: current_user
-              template: title/user.templ.html
+              file: title/user.templ.html
 
             - name: user_settings
-              template: title.user-settings.templ.html
+              file: title.user-settings.templ.html
 
         - name: content
 
         - name: footer
-          template: footer.templ.html
+          file: footer.templ.html
           children:
             - name: tcs
-              template: footer/tcs.templ.html
+              file: footer/tcs.templ.html
 
 home:
     extends: base > content
-    template: home.templ.html
+    file: home.templ.html
     children:
         - name: newsfeed
-          template: home/newsfeed.templ.html
+          file: home/newsfeed.templ.html
           children:
             - name: newsitem
-              template: home/newsitem.templ.html
+              file: home/newsitem.templ.html
               children:
                 - name: user
-                  template: home/newsitem_user.templ.html
+                  file: home/newsitem_user.templ.html
 
             - name: manage-new-item
-              template: home/manage-newsitem.templ.html
+              file: home/manage-newsitem.templ.html
 
         - name: friends
-          template: home/friends.templ.html
+          file: home/friends.templ.html
           children:
             - name: user
-              template: home/friend.templ.html
+              file: home/friend.templ.html
 
 settings:
     extends: base > content
-    template: settings.templ.html
+    file: settings.templ.html
     children:
         - name: content
 
 user_settings:
     extends: settings > content
-    template: settings/user.templ.html
+    file: settings/user.templ.html
     children:
         - name: user-profile
-          template: settings/user-profile.templ.html
+          file: settings/user-profile.templ.html
           children:
             - name: user-profile-image
-              template: settings/user-profile-image.templ.html
+              file: settings/user-profile-image.templ.html
 
 privacy_settings:
     extends: base > content
-    template: settings/privacy.templ.html
+    file: settings/privacy.templ.html
     children:
         - name: privacy-form
-          template: settings/privacy-form.templ.html
+          file: settings/privacy-form.templ.html

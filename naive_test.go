@@ -35,18 +35,20 @@ func TestNaiveRenderer(t *testing.T) {
 	}
 	pth := wd + "/assets/base.templ.html"
 
-	tmpls := Templates{}
-	tmpl := Template{
-		Name:     "test",
-		Template: pth,
-		Handler: func(w ResponseWriter, r *http.Request) {
-			w.Data(cons{1, &cons{Data: 2}})
+	pages := Pages{}
+	page := Page{
+		Template: Template{
+			Name: "test",
+			File: pth,
+			Handler: func(w ResponseWriter, r *http.Request) {
+				w.Data(cons{1, &cons{Data: 2}})
+			},
 		},
 	}
-	tmpls["test"] = tmpl
+	pages["test"] = page
 
 	r, err := NewNaiveRenderer(func(c Configure) error {
-		c.AddTemplates(tmpls)
+		c.AddPages(pages)
 		return nil
 	})
 
@@ -83,34 +85,36 @@ func TestNaiveRendererWithChildren(t *testing.T) {
 	}
 	pth := wd + "/assets/"
 
-	tmpls := Templates{}
-	tmpl := Template{
-		Name:     "test",
-		Template: pth + "base.templ.html",
-		Handler: func(w ResponseWriter, r *http.Request) {
-			d, loaded := w.Delegate("sub", r)
-			if !loaded {
-				// no model was loaded, do nothing
-				return
-			}
-			sub, ok := d.(cons)
-			if !ok {
-				log.Fatalf("Handler delegate did not output a 'cons' type")
-			}
-			w.Data(cons{1, &sub})
-		},
-		Children: []Template{Template{
-			Name:     "sub",
-			Template: pth + "sub.templ.html",
+	pages := Pages{}
+	page := Page{
+		Template: Template{
+			Name: "test",
+			File: pth + "base.templ.html",
 			Handler: func(w ResponseWriter, r *http.Request) {
-				w.Data(cons{Data: 2})
+				d, loaded := w.Delegate("sub", r)
+				if !loaded {
+					// no model was loaded, do nothing
+					return
+				}
+				sub, ok := d.(cons)
+				if !ok {
+					log.Fatalf("Handler delegate did not output a 'cons' type")
+				}
+				w.Data(cons{1, &sub})
 			},
-		}},
+			Children: []Template{Template{
+				Name: "sub",
+				File: pth + "sub.templ.html",
+				Handler: func(w ResponseWriter, r *http.Request) {
+					w.Data(cons{Data: 2})
+				},
+			}},
+		},
 	}
-	tmpls["test"] = tmpl
+	pages["test"] = page
 
 	r, err := NewNaiveRenderer(func(c Configure) error {
-		c.AddTemplates(tmpls)
+		c.AddPages(pages)
 		return nil
 	})
 

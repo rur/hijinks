@@ -55,7 +55,7 @@ func (w *hjResponseWriter) executeTemplate(data interface{}) {
 }
 
 func getTemplateFiles(t *Template) []string {
-	tpls := []string{t.Template}
+	tpls := []string{t.File}
 	// TODO: consider how this list of templates should be ordered.
 	for i := 0; i < len(t.Children); i++ {
 		tpls = append(tpls, getTemplateFiles(&t.Children[i])...)

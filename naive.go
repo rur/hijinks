@@ -7,15 +7,16 @@ import (
 // Most stupid thing that might work
 // implements both the Renderer and Configure interfaces
 type naiveImpl struct {
-	templates Templates
+	pages Pages
 }
 
 func (n *naiveImpl) Handler(name string) http.HandlerFunc {
 	// this should create two template instances,
 	// one for the template root and one for the partial
-	templ, ok := n.templates[name]
+	page, ok := n.pages[name]
+	templ := page.Template
 	if !ok {
-		panic("no templates found here!")
+		panic("no pages found here!")
 	}
 	return func(w http.ResponseWriter, r *http.Request) {
 		hw := hjResponseWriter{ResponseWriter: w, template: templ}
@@ -27,7 +28,7 @@ func (n *naiveImpl) Handler(name string) http.HandlerFunc {
 }
 
 func (n *naiveImpl) Sub(cfgs ...ConfigFunc) (Renderer, error) {
-	sub := naiveImpl{n.templates}
+	sub := naiveImpl{n.pages}
 	for _, cfn := range cfgs {
 		err := cfn(&sub)
 		if err != nil {
@@ -38,15 +39,15 @@ func (n *naiveImpl) Sub(cfgs ...ConfigFunc) (Renderer, error) {
 }
 
 func (n *naiveImpl) AddHandler(name string, handler HijinksHandler) {
-	templ, ok := n.templates[name]
+	templ, ok := n.pages[name]
 	if ok != true {
-		panic("no templates found here!")
+		panic("no pages found here!")
 	}
 	templ.Handler = handler
 }
 
-func (n *naiveImpl) AddTemplates(tls Templates) {
-	n.templates = tls
+func (n *naiveImpl) AddPages(tls Pages) {
+	n.pages = tls
 }
 
 func NewNaiveRenderer(c ...ConfigFunc) (Renderer, error) {
