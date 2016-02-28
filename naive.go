@@ -2,27 +2,31 @@ package hijinks
 
 import (
 	"net/http"
-	"strings"
 )
 
 // Most stupid thing that might work
 // implements both the Renderer and Configure interfaces
 type naiveImpl struct {
+	index templateIndex
 	pages Pages
 }
 
-func (n *naiveImpl) Handler(name string) http.HandlerFunc {
-	// this should create two template instances,
-	// one for the template root and one for the partial
-	page, ok := n.pages[name]
-	if page.Extends != "" {
-		strings.Split(page.Extends, " > ")
+func (n *naiveImpl) Handler(path string) http.HandlerFunc {
+	if node := n.getTemplatePath(path); node == nil {
+		panic("Unable to create hijinks handler, template not found: " + path)
 	}
-	templ := page.Template
-	if !ok {
-		panic("no pages found here!")
-	}
+	// the following templates are used to render a full page
+	document := node.root().exportTemplate()
+	// the following is used for only the specific partial
+	partial := node.exportTemplate()
+	
 	return func(w http.ResponseWriter, r *http.Request) {
+		var templ *Template
+		if r.Headers("HIJINKS-AJAX") {
+			templ = partial
+		} else {
+			templ = document
+		}
 		hw := hjResponseWriter{ResponseWriter: w, template: templ}
 		model, ok := hw.loadData(r)
 		if ok {
@@ -32,10 +36,10 @@ func (n *naiveImpl) Handler(name string) http.HandlerFunc {
 }
 
 func (n *naiveImpl) Sub(cfgs ...ConfigFunc) (Renderer, error) {
-	sub := naiveImpl{n.pages}
+	sub := n.dup()
+	var err error
 	for _, cfn := range cfgs {
-		err := cfn(&sub)
-		if err != nil {
+		if err = cfn(&sub); err != nil {
 			return nil, err
 		}
 	}
@@ -50,8 +54,17 @@ func (n *naiveImpl) AddHandler(name string, handler HijinksHandler) {
 	templ.Handler = handler
 }
 
-func (n *naiveImpl) AddPages(tls Pages) {
-	n.pages = tls
+func (n *naiveImpl) AddPages(p *Pages) {
+	n.index.addPages(p)
+	for nme, tpl := range p {
+		n.pages[nme] = p[name]
+	}
+}
+
+func (n *naiveImpl) dup() *naiveImpl {
+	d := naiveImpl{}
+	d.AddPages(n.pages)
+	return &d
 }
 
 func NewNaiveRenderer(c ...ConfigFunc) (Renderer, error) {
@@ -59,11 +72,3 @@ func NewNaiveRenderer(c ...ConfigFunc) (Renderer, error) {
 	return r.Sub(c...)
 }
 
-func expandTemplates(page *Page, path string) *[]Template {
-	var (
-		pages    []*Page
-		template []Template
-	)
-
-	strings.Split(path, " > ")
-}

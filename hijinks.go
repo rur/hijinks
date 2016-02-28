@@ -3,24 +3,20 @@ package hijinks
 import "net/http"
 
 type Template struct {
+	Extends  string
 	Name     string
 	File     string
 	Handler  HijinksHandler
 	Children []Template
 }
 
-type Page struct {
-	Template
-	Extends string
-}
-
-type Pages map[string]Page
+type Pages map[string]Template
 
 type Configure interface {
 	// set the handler associated with a template
 	AddHandler(string, HijinksHandler)
 	// add a new template definition
-	AddPages(Pages)
+	AddPages(*Pages)
 }
 
 type ResponseWriter interface {
