@@ -17,13 +17,14 @@ func (n *naiveImpl) Handler(path string) http.HandlerFunc {
 		panic("Unable to create hijinks handler, template not found: " + path)
 	}
 	// the following templates are used to render a full page
-	// document := node.exportRootTemplate()
+	document := node.exportRootTemplate()
 	// the following is used for only the specific partial
-	partial := node.Template
+	// partial := node.Template
+	//
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		var templ *Template
-		templ = partial
+		templ = document
 		hw := hjResponseWriter{ResponseWriter: w, template: templ}
 		model, ok := hw.loadData(r)
 		if ok {
@@ -34,11 +35,9 @@ func (n *naiveImpl) Handler(path string) http.HandlerFunc {
 
 func (n *naiveImpl) Sub(cfgs ...ConfigFunc) (Renderer, error) {
 	sub := n.dup()
-	var err error
-	for _, cfn := range cfgs {
-		if err = cfn(sub); err != nil {
-			return nil, err
-		}
+	err := sub.configure(cfgs...)
+	if err != nil {
+		return nil, err
 	}
 	return sub, nil
 }
@@ -52,12 +51,12 @@ func (n *naiveImpl) AddHandler(name string, handler HijinksHandler) {
 }
 
 func (n *naiveImpl) AddPages(p Pages) {
-	var templ Template
 	for name, _ := range p {
-		templ = p[name]
+		templ := p[name]
 		n.index.addTemplate(name, &templ)
 		n.pages[name] = p[name]
 	}
+	n.index.linkTemplates()
 }
 
 func (n *naiveImpl) dup() *naiveImpl {
@@ -67,6 +66,20 @@ func (n *naiveImpl) dup() *naiveImpl {
 }
 
 func NewNaiveRenderer(c ...ConfigFunc) (Renderer, error) {
-	r := naiveImpl{}
-	return r.Sub(c...)
+	r := naiveImpl{make(templateIndex), make(Pages)}
+	err := r.configure(c...)
+	if err != nil {
+		return nil, err
+	}
+	return &r, nil
+}
+
+func (n *naiveImpl) configure(cfgs ...ConfigFunc) error {
+	var err error
+	for _, cfn := range cfgs {
+		if err = cfn(n); err != nil {
+			return err
+		}
+	}
+	return nil
 }

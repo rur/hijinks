@@ -55,7 +55,7 @@ func (w *hjResponseWriter) executeTemplate(data interface{}) {
 }
 
 func aggregateTemplateFiles(t *Template) []string {
-	// collects a list inlcude this template and all of its decendents
+	// collects a list include this template and all of its descendants
 	tpls := []string{t.File}
 	// TODO: consider how this list of templates should be ordered,
 	//       because this isn't right
