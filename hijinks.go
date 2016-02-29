@@ -16,7 +16,7 @@ type Configure interface {
 	// set the handler associated with a template
 	AddHandler(string, HijinksHandler)
 	// add a new template definition
-	AddPages(*Pages)
+	AddPages(Pages)
 }
 
 type ResponseWriter interface {

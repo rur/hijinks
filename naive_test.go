@@ -35,14 +35,12 @@ func TestNaiveRenderer(t *testing.T) {
 	}
 	pth := wd + "/assets/base.templ.html"
 
-	pages := Pages{}
-	page := Page{
-		Template: Template{
-			Name: "test",
-			File: pth,
-			Handler: func(w ResponseWriter, r *http.Request) {
-				w.Data(cons{1, &cons{Data: 2}})
-			},
+	pages := make(Pages)
+	page := Template{
+		Name: "test",
+		File: pth,
+		Handler: func(w ResponseWriter, r *http.Request) {
+			w.Data(cons{1, &cons{Data: 2}})
 		},
 	}
 	pages["test"] = page
@@ -87,30 +85,28 @@ func TestNaiveRendererWithChildren(t *testing.T) {
 	pth := wd + "/assets/"
 
 	pages := Pages{}
-	page := Page{
-		Template: Template{
-			Name: "test",
-			File: pth + "base.templ.html",
-			Handler: func(w ResponseWriter, r *http.Request) {
-				d, loaded := w.Delegate("sub", r)
-				if !loaded {
-					// no model was loaded, do nothing
-					return
-				}
-				sub, ok := d.(cons)
-				if !ok {
-					log.Fatalf("Handler delegate did not output a 'cons' type")
-				}
-				w.Data(cons{1, &sub})
-			},
-			Children: []Template{Template{
-				Name: "sub",
-				File: pth + "sub.templ.html",
-				Handler: func(w ResponseWriter, r *http.Request) {
-					w.Data(cons{Data: 2})
-				},
-			}},
+	page := Template{
+		Name: "test",
+		File: pth + "base.templ.html",
+		Handler: func(w ResponseWriter, r *http.Request) {
+			d, loaded := w.Delegate("sub", r)
+			if !loaded {
+				// no model was loaded, do nothing
+				return
+			}
+			sub, ok := d.(cons)
+			if !ok {
+				log.Fatalf("Handler delegate did not output a 'cons' type")
+			}
+			w.Data(cons{1, &sub})
 		},
+		Children: []Template{Template{
+			Name: "sub",
+			File: pth + "sub.templ.html",
+			Handler: func(w ResponseWriter, r *http.Request) {
+				w.Data(cons{Data: 2})
+			},
+		}},
 	}
 	pages["test"] = page
 
@@ -154,35 +150,31 @@ func TestNaiveRendererExtendedPages(t *testing.T) {
 	pth := wd + "/assets/"
 
 	pages := Pages{}
-	pages["base"] = Page{
-		Template: Template{
-			Name: "base",
-			File: pth + "base.templ.html",
-			Handler: func(w ResponseWriter, r *http.Request) {
-				d, loaded := w.Delegate("sub", r)
-				if !loaded {
-					// no model was loaded, do nothing
-					return
-				}
-				sub, ok := d.(cons)
-				if !ok {
-					log.Fatalf("Handler delegate did not output a 'cons' type")
-				}
-				w.Data(cons{1, &sub})
-			},
-			Children: []Template{Template{
-				Name: "content",
-			}},
+	pages["base"] = Template{
+		Name: "base",
+		File: pth + "base.templ.html",
+		Handler: func(w ResponseWriter, r *http.Request) {
+			d, loaded := w.Delegate("sub", r)
+			if !loaded {
+				// no model was loaded, do nothing
+				return
+			}
+			sub, ok := d.(cons)
+			if !ok {
+				log.Fatalf("Handler delegate did not output a 'cons' type")
+			}
+			w.Data(cons{1, &sub})
 		},
+		Children: []Template{Template{
+			Name: "content",
+		}},
 	}
-	pages["sub"] = Page{
+	pages["sub"] = Template{
 		Extends: "base > content",
-		Template: Template{
-			Name: "sub",
-			File: pth + "sub.templ.html",
-			Handler: func(w ResponseWriter, r *http.Request) {
-				w.Data(cons{Data: 2})
-			},
+		Name:    "sub",
+		File:    pth + "sub.templ.html",
+		Handler: func(w ResponseWriter, r *http.Request) {
+			w.Data(cons{Data: 2})
 		},
 	}
 

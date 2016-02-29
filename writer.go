@@ -8,7 +8,7 @@ import (
 
 type hjResponseWriter struct {
 	http.ResponseWriter
-	template   Template
+	template   *Template
 	data       interface{}
 	dataCalled bool
 }
@@ -23,7 +23,7 @@ func (w *hjResponseWriter) Delegate(n string, r *http.Request) (interface{}, boo
 		if c.Name == n {
 			dw := hjResponseWriter{
 				ResponseWriter: w.ResponseWriter,
-				template:       c,
+				template:       &c,
 			}
 			return dw.loadData(r)
 		}
@@ -42,7 +42,7 @@ func (w *hjResponseWriter) loadData(r *http.Request) (interface{}, bool) {
 }
 
 func (w *hjResponseWriter) executeTemplate(data interface{}) {
-	files := aggregateTemplateFiles(&w.template)
+	files := aggregateTemplateFiles(w.template)
 
 	t, err := template.ParseFiles(files...)
 	if err != nil {
@@ -56,11 +56,11 @@ func (w *hjResponseWriter) executeTemplate(data interface{}) {
 
 func aggregateTemplateFiles(t *Template) []string {
 	// collects a list inlcude this template and all of its decendents
-	tpls := []string{t.Template.File}
+	tpls := []string{t.File}
 	// TODO: consider how this list of templates should be ordered,
 	//       because this isn't right
 	for i := 0; i < len(t.Children); i++ {
-		tpls = append(tpls, aggregateTemplateFiles(t.children[i])...)
+		tpls = append(tpls, aggregateTemplateFiles(&t.Children[i])...)
 	}
 	return tpls
 }

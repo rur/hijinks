@@ -20,10 +20,7 @@ func YAML(data []byte) ConfigFunc {
 		pages := make(Pages)
 		for name, def := range defs {
 			def.Name = name
-			pages[name] = Page{
-				Extends:  def.Extends,
-				Template: *def.mapToTemplate(),
-			}
+			pages[name] = *def.mapToTemplate()
 		}
 
 		config.AddPages(pages)
@@ -33,8 +30,9 @@ func YAML(data []byte) ConfigFunc {
 
 func (y *yamlDef) mapToTemplate() *Template {
 	t := Template{
-		Name: y.Name,
-		File: y.File,
+		Name:    y.Name,
+		Extends: y.Extends,
+		File:    y.File,
 	}
 	for _, def := range y.Children {
 		t.Children = append(t.Children, *def.mapToTemplate())

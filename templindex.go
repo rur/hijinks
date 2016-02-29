@@ -2,7 +2,6 @@ package hijinks
 
 import (
 	"fmt"
-	"strings"
 )
 
 // node in a bottom up representation of the template hierarchy
@@ -34,7 +33,7 @@ func (n *templNode) exportRootTemplate() *Template {
 	var ch *Template
 	for i, _ := range old.Children {
 		ch = &old.Children[i]
-		if *ch == *base.Template {
+		if ch.Name == base.Template.Name {
 			ch = n.Template
 		}
 		newp.Children[i] = *ch
@@ -49,27 +48,27 @@ func (n *templNode) exportRootTemplate() *Template {
 
 // index template node by their path eg. "a > b > c"
 
-type templateIndex map[string]templNode
+type templateIndex map[string]*templNode
 
-func (ti *templateIndex) addTemplate(path string, t *Template) *templNode {
+func (ti templateIndex) addTemplate(path string, t *Template) *templNode {
 	var (
 		extends *templNode
 		parent  *templNode
 	)
 	if t.Extends != "" {
 		if extends, ok := ti[t.Extends]; ok {
-			parent := extends.parent
-			if parent == nil {
+			oldp := extends.parent
+			if oldp == nil {
 				panic(fmt.Sprintf("Hinjinks Template '%s' cannot extend a root template '%s'", path, t.Extends))
 			}
 			// copy the extended parent node
-			pcopy := templNode{parent.Template, parent.extends, parent.parent}
+			parent = &templNode{oldp.Template, oldp.extends, oldp.parent}
 		} else {
 			panic(fmt.Sprintf("Hijinks Template '%s' cannot extend '%s', template not found", path, t.Extends))
 		}
 	}
 	// create new node with back reference to parent template node
-	nt = templNode{t, extends, parent}
+	nt := templNode{t, extends, parent}
 	for i, _ := range t.Children {
 		cld := &t.Children[i]
 		ct := ti.addTemplate(path+" > "+cld.Name, cld)
