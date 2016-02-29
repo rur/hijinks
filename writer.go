@@ -42,7 +42,7 @@ func (w *hjResponseWriter) loadData(r *http.Request) (interface{}, bool) {
 }
 
 func (w *hjResponseWriter) executeTemplate(data interface{}) {
-	files := getTemplateFiles(&w.template)
+	files := aggregateTemplateFiles(&w.template)
 
 	t, err := template.ParseFiles(files...)
 	if err != nil {
@@ -54,3 +54,13 @@ func (w *hjResponseWriter) executeTemplate(data interface{}) {
 	}
 }
 
+func aggregateTemplateFiles(t *Template) []string {
+	// collects a list inlcude this template and all of its decendents
+	tpls := []string{t.Template.File}
+	// TODO: consider how this list of templates should be ordered,
+	//       because this isn't right
+	for i := 0; i < len(t.Children); i++ {
+		tpls = append(tpls, aggregateTemplateFiles(t.children[i])...)
+	}
+	return tpls
+}

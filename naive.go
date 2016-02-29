@@ -16,10 +16,10 @@ func (n *naiveImpl) Handler(path string) http.HandlerFunc {
 		panic("Unable to create hijinks handler, template not found: " + path)
 	}
 	// the following templates are used to render a full page
-	document := node.root().exportTemplate()
+	document := node.exportRootTemplate()
 	// the following is used for only the specific partial
-	partial := node.exportTemplate()
-	
+	partial := node.Template
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		var templ *Template
 		if r.Headers("HIJINKS-AJAX") {
@@ -55,8 +55,8 @@ func (n *naiveImpl) AddHandler(name string, handler HijinksHandler) {
 }
 
 func (n *naiveImpl) AddPages(p *Pages) {
-	n.index.addPages(p)
-	for nme, tpl := range p {
+	for name, templ := range p {
+		n.index.addTemplate(name, templ)
 		n.pages[nme] = p[name]
 	}
 }
@@ -71,4 +71,3 @@ func NewNaiveRenderer(c ...ConfigFunc) (Renderer, error) {
 	r := naiveImpl{}
 	return r.Sub(c...)
 }
-
