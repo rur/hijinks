@@ -1,6 +1,7 @@
 package hijinks
 
 import (
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
@@ -28,25 +29,28 @@ func (w *hjResponseWriter) Delegate(n string, r *http.Request) (interface{}, boo
 			return dw.loadData(r)
 		}
 	}
-	panic("no matching template was found")
+	panic(fmt.Sprintf("no matching template was found for '%s'", n))
 }
 
 func (w *hjResponseWriter) loadData(r *http.Request) (interface{}, bool) {
-	w.template.Handler(w, r)
+	if w.template.Handler != nil {
+		w.template.Handler(w, r)
 
-	if w.dataCalled {
-		return w.data, true
-	} else {
-		return nil, false
+		if w.dataCalled {
+			return w.data, true
+		}
 	}
+	return nil, false
 }
 
 func (w *hjResponseWriter) executeTemplate(data interface{}) {
 	files := aggregateTemplateFiles(w.template)
 
+	fmt.Printf("\nexecute template: %v\n", files)
+
 	t, err := template.ParseFiles(files...)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Error parsing files: ", err)
 	}
 
 	if err := t.Execute(w, data); err != nil {
@@ -56,11 +60,15 @@ func (w *hjResponseWriter) executeTemplate(data interface{}) {
 
 func aggregateTemplateFiles(t *Template) []string {
 	// collects a list include this template and all of its descendants
-	tpls := []string{t.File}
+	var tpls []string
+
+	if t.File != "" {
+		tpls = append(tpls, t.File)
+	}
 	// TODO: consider how this list of templates should be ordered,
 	//       because this isn't right
-	for i := 0; i < len(t.Children); i++ {
-		tpls = append(tpls, aggregateTemplateFiles(&t.Children[i])...)
+	for _, tpl := range t.Children {
+		tpls = append(tpls, aggregateTemplateFiles(&tpl)...)
 	}
 	return tpls
 }

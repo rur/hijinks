@@ -11,6 +11,7 @@ import (
 
 type cons struct {
 	Data int
+	List []int
 	Next *cons
 }
 
@@ -40,7 +41,7 @@ func TestNaiveRenderer(t *testing.T) {
 		Name: "test",
 		File: pth,
 		Handler: func(w ResponseWriter, r *http.Request) {
-			w.Data(cons{1, &cons{Data: 2}})
+			w.Data(cons{Data: 1, Next: &cons{Data: 2}})
 		},
 	}
 	pages["test"] = page
@@ -98,15 +99,17 @@ func TestNaiveRendererWithChildren(t *testing.T) {
 			if !ok {
 				log.Fatalf("Handler delegate did not output a 'cons' type")
 			}
-			w.Data(cons{1, &sub})
+			w.Data(cons{Data: 1, Next: &sub})
 		},
-		Children: []Template{Template{
-			Name: "sub",
-			File: pth + "sub.templ.html",
-			Handler: func(w ResponseWriter, r *http.Request) {
-				w.Data(cons{Data: 2})
+		Children: map[string]Template{
+			"sub": Template{
+				Name: "sub",
+				File: pth + "sub.templ.html",
+				Handler: func(w ResponseWriter, r *http.Request) {
+					w.Data(cons{Data: 2})
+				},
 			},
-		}},
+		},
 	}
 	pages["test"] = page
 
@@ -163,11 +166,13 @@ func TestNaiveRendererExtendedPages(t *testing.T) {
 			if !ok {
 				log.Fatalf("Handler delegate did not output a 'cons' type")
 			}
-			w.Data(cons{1, &sub})
+			w.Data(cons{Data: 1, Next: &sub})
 		},
-		Children: []Template{Template{
-			Name: "content",
-		}},
+		Children: map[string]Template{
+			"content": Template{
+				Name: "content",
+			},
+		},
 	}
 	pages["sub"] = Template{
 		Extends: "base > content",

@@ -8,8 +8,8 @@ func TestAddTemplate(t *testing.T) {
 	ind := make(templateIndex)
 	t1 := Template{
 		Name: "root",
-		Children: []Template{
-			Template{
+		Children: map[string]Template{
+			"sub": Template{
 				Name: "sub",
 			},
 		},
@@ -36,8 +36,8 @@ func TestLinkTemplates(t *testing.T) {
 	ind := make(templateIndex)
 	t1 := Template{
 		Name: "root",
-		Children: []Template{
-			Template{
+		Children: map[string]Template{
+			"sub": Template{
 				Name: "sub",
 			},
 		},
@@ -74,8 +74,8 @@ func TestExportRootTemplate(t *testing.T) {
 	ind := make(templateIndex)
 	t1 := Template{
 		Name: "root",
-		Children: []Template{
-			Template{
+		Children: map[string]Template{
+			"sub": Template{
 				Name: "sub",
 			},
 		},
@@ -94,13 +94,13 @@ func TestExportRootTemplate(t *testing.T) {
 
 	node = ind["root > sub"]
 	tpl = node.exportRootTemplate()
-	if tpl.Children[0].Name != "sub" {
+	if tpl.Children["sub"].Name != "sub" {
 		t.Fatalf("'root > sub' node did not export the correct template, %v", tpl)
 	}
 
 	node = ind["sub2"]
 	tpl = node.exportRootTemplate()
-	if tpl.Children[0].Name != "sub2" {
+	if tpl.Children["sub"].Name != "sub2" {
 		t.Fatalf("'sub2' node did not return the correct template, %v", tpl)
 	}
 }

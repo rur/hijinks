@@ -8,6 +8,7 @@ import (
 
 type Cons struct {
 	Data int
+	List []int
 	Next *Cons
 }
 
@@ -20,7 +21,7 @@ func fullPage(ctx server, w http.ResponseWriter, req *http.Request) {
 		log.Fatal(err)
 	}
 
-	d := Cons{1, &Cons{Data: 2}}
+	d := Cons{Data: 1, Next: &Cons{Data: 2}}
 
 	if err := t.Execute(w, d); err != nil {
 		log.Fatal(err)
@@ -35,7 +36,7 @@ func pagePartial(ctx server, w http.ResponseWriter, req *http.Request) {
 		log.Fatal(err)
 	}
 
-	d := Cons{1, &Cons{Data: 2}}
+	d := Cons{Data: 1, Next: &Cons{Data: 2}}
 
 	if err := t.Execute(w, d); err != nil {
 		log.Fatal(err)

@@ -31,19 +31,18 @@ func (n *templNode) exportRootTemplate() *Template {
 		Name:     old.Name,
 		File:     old.File,
 		Handler:  old.Handler,
-		Children: make([]Template, len(old.Children)),
+		Children: make(map[string]Template),
 	}
 	// copy child templates list, replacing base with child node
-	for i, _ := range old.Children {
-		ch := &old.Children[i]
+	for name, ch := range old.Children {
 		if ch.Name == base.Template.Name {
-			ch = n.Template
+			ch = *n.Template
 		}
-		newp.Children[i] = *ch
+		newp.Children[name] = ch
 	}
-	if base.parent.parent != nil {
+	if n.parent.parent != nil {
 		// keep copying templates until you reach the root
-		return base.parent.exportRootTemplate()
+		return n.parent.exportRootTemplate()
 	} else {
 		return &newp
 	}
@@ -56,9 +55,8 @@ type templateIndex map[string]*templNode
 func (ti templateIndex) addTemplate(path string, t *Template) *templNode {
 	// create new node with back reference to parent template node
 	nt := templNode{t, nil, nil}
-	for i, _ := range t.Children {
-		cld := &t.Children[i]
-		ct := ti.addTemplate(path+" > "+cld.Name, cld)
+	for name, cld := range t.Children {
+		ct := ti.addTemplate(path+" > "+name, &cld)
 		ct.parent = &nt
 	}
 	ti[path] = &nt

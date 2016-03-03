@@ -30,12 +30,13 @@ func YAML(data []byte) ConfigFunc {
 
 func (y *yamlDef) mapToTemplate() *Template {
 	t := Template{
-		Name:    y.Name,
-		Extends: y.Extends,
-		File:    y.File,
+		Name:     y.Name,
+		Extends:  y.Extends,
+		File:     y.File,
+		Children: make(map[string]Template),
 	}
 	for _, def := range y.Children {
-		t.Children = append(t.Children, *def.mapToTemplate())
+		t.Children[def.Name] = *def.mapToTemplate()
 	}
 	return &t
 }
