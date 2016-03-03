@@ -46,8 +46,6 @@ func (w *hjResponseWriter) loadData(r *http.Request) (interface{}, bool) {
 func (w *hjResponseWriter) executeTemplate(data interface{}) {
 	files := aggregateTemplateFiles(w.template)
 
-	fmt.Printf("\nexecute template: %v\n", files)
-
 	t, err := template.ParseFiles(files...)
 	if err != nil {
 		log.Fatal("Error parsing files: ", err)

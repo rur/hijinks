@@ -14,38 +14,45 @@ type templNode struct {
 }
 
 func (n *templNode) exportRootTemplate() *Template {
-	// create a copy of all inherited template definitions
-	// return the root
-	base := n
-	for base.extends != nil {
-		base = base.extends
+	node := n
+	templ := n.Template
+	name := templ.Name
+
+	for node.parent != nil || node.extends != nil {
+		if node.extends != nil {
+			name = node.extends.Template.Name
+			node = node.extends.parent
+		} else {
+			name = node.Template.Name
+			node = node.parent
+		}
+		templ = node.substitueTemplate(name, templ)
 	}
-	if base.parent == nil {
-		// this *is* a root template
-		return n.Template
-	}
-	// copy parent template
-	old := base.parent.Template
-	newp := Template{
+
+	return templ
+}
+
+func (t *templNode) substitueTemplate(name string, child *Template) *Template {
+	// Create a copy of the node template and swap a specified child
+	old := t.Template
+
+	// make a copy of the old template
+	nue := Template{
 		Extends:  old.Extends,
 		Name:     old.Name,
 		File:     old.File,
 		Handler:  old.Handler,
 		Children: make(map[string]Template),
 	}
-	// copy child templates list, replacing base with child node
-	for name, ch := range old.Children {
-		if ch.Name == base.Template.Name {
-			ch = *n.Template
+	// swap out the extended child
+	for n, ch := range old.Children {
+		if n == name {
+			nue.Children[n] = *child
+		} else {
+			nue.Children[n] = ch
 		}
-		newp.Children[name] = ch
 	}
-	if n.parent.parent != nil {
-		// keep copying templates until you reach the root
-		return n.parent.exportRootTemplate()
-	} else {
-		return &newp
-	}
+	return &nue
 }
 
 // index template node by their path eg. "a > b > c"
@@ -64,18 +71,18 @@ func (ti templateIndex) addTemplate(path string, t *Template) *templNode {
 }
 
 func (ti templateIndex) linkTemplates() {
+	// populate .extends property of page templNodes (those wo a parent)
+	// this is a separate step from adding template nodes so that the order
+	// they are added wont matter
 	for path, _ := range ti {
 		node := ti[path]
 		t := node.Template
-		if t.Extends != "" {
+		if node.parent == nil && t.Extends != "" {
 			if extends, ok := ti[t.Extends]; ok {
 				node.extends = extends
-				oldp := extends.parent
-				if oldp == nil {
-					panic(fmt.Sprintf("Hinjinks Template '%s' cannot extend a root template '%s'", path, t.Extends))
+				if extends.parent == nil {
+					panic(fmt.Sprintf("Hinjinks Template '%s' cannot extend a page template '%s'", path, t.Extends))
 				}
-				// copy the extended parent node
-				node.parent = &templNode{oldp.Template, oldp.extends, oldp.parent}
 			} else {
 				panic(fmt.Sprintf("Hijinks Template '%s' cannot extend '%s', template not found", path, t.Extends))
 			}
