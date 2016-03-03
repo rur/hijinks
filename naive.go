@@ -24,6 +24,8 @@ func (n *naiveImpl) Handler(path string) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		var templ *Template
+		// TODO: Check request headers for a hijinks flag to only render partial
+		// 	 instead of the full document
 		templ = document
 		hw := hjResponseWriter{ResponseWriter: w, template: templ}
 		model, ok := hw.loadData(r)

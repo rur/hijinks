@@ -1,11 +1,11 @@
 {{block "sub" .}}
   <div>Test value = {{.Data}}</div>
-{{end}}
-{{block "sub_other" . }}
-  <div>sub_other data = {{.Data}}</div>
   <ul>
     {{range $key, $value := .List -}}
     <li> <h4>The Key: {{$key}}</h4>{{block "sub_list" $value}} <p>Default item = {{.}}</p> {{end}}</li>
     {{end}}
   </ul>
+{{end}}
+{{block "sub_other" . }}
+  <div>sub_other data = {{.Data}}</div>
 {{end}}

@@ -20,16 +20,16 @@ func (w *hjResponseWriter) Data(d interface{}) {
 }
 
 func (w *hjResponseWriter) Delegate(n string, r *http.Request) (interface{}, bool) {
-	for _, c := range w.template.Children {
-		if c.Name == n {
-			dw := hjResponseWriter{
-				ResponseWriter: w.ResponseWriter,
-				template:       &c,
-			}
-			return dw.loadData(r)
+	// TODO: this should support delegating to children of children using '>' syntax
+	if templ, ok := w.template.Children[n]; ok {
+		dw := hjResponseWriter{
+			ResponseWriter: w.ResponseWriter,
+			template:       &templ,
 		}
+		return dw.loadData(r)
+	} else {
+		panic(fmt.Sprintf("Hijinks Delegate call did not match any template children '%s'", n))
 	}
-	panic(fmt.Sprintf("no matching template was found for '%s'", n))
 }
 
 func (w *hjResponseWriter) loadData(r *http.Request) (interface{}, bool) {
