@@ -22,7 +22,7 @@ func TestNaiveRenderer_NilCase(t *testing.T) {
 		}
 	}()
 
-	r, err := NewNaiveRenderer()
+	r, err := NewRenderer()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -43,7 +43,7 @@ func TestNaiveRenderer(t *testing.T) {
 	}
 	pages["test"] = page
 
-	r, err := NewNaiveRenderer(func(c Configure) error {
+	r, err := NewRenderer(func(c Configure) error {
 		c.AddPages(pages)
 		c.AddHandler("test", func(w ResponseWriter, r *http.Request) {
 			w.Data(cons{Data: 1, Next: &cons{Data: 2}})
@@ -85,25 +85,25 @@ func TestNaiveRendererWithChildren(t *testing.T) {
 	}
 	pth := wd + "/assets/"
 
-	pages := Pages{}
-	page := Template{
-		Name: "test",
-		File: pth + "base.templ.html",
-		Children: map[string]*Template{
-			"sub": &Template{
-				Name: "sub",
-				File: pth + "sub.templ.html",
+	r, err := NewRenderer(func(c Configure) error {
+		c.AddPages(Pages{
+			"test": Template{
+				Name: "test",
+				File: pth + "base.templ.html",
+				Children: map[string]*Template{
+					"sub": &Template{
+						Name: "sub",
+						File: pth + "sub.templ.html",
+						Handler: func(w ResponseWriter, r *http.Request) {
+							panic("this should be overridden!")
+						},
+					},
+				},
 			},
-		},
-	}
-	pages["test"] = page
-
-	r, err := NewNaiveRenderer(func(c Configure) error {
-		c.AddPages(pages)
+		})
 		c.AddHandler("test", func(w ResponseWriter, r *http.Request) {
 			d, loaded := w.Delegate("sub", r)
 			if !loaded {
-				// no model was loaded, do nothing
 				return
 			}
 			sub, ok := d.(cons)
@@ -183,7 +183,7 @@ func TestNaiveRendererExtendedPages(t *testing.T) {
 		},
 	}
 
-	r, err := NewNaiveRenderer(func(c Configure) error {
+	r, err := NewRenderer(func(c Configure) error {
 		c.AddPages(pages)
 		return nil
 	})
@@ -281,7 +281,7 @@ func TestNaiveRendererMultipleExtendedPages(t *testing.T) {
 		},
 	}
 
-	r, err := NewNaiveRenderer(func(c Configure) error {
+	r, err := NewRenderer(func(c Configure) error {
 		c.AddPages(pages)
 		return nil
 	})

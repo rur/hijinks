@@ -1,11 +1,12 @@
 package hijinks
 
 import (
+	"net/http"
 	"testing"
 )
 
 func TestAddTemplate(t *testing.T) {
-	ind := make(templateIndex)
+	ind := newTemplateIndex()
 	t1 := Template{
 		Name: "root",
 		Children: map[string]*Template{
@@ -14,26 +15,51 @@ func TestAddTemplate(t *testing.T) {
 			},
 		},
 	}
-	ind.addTemplate("root", &t1)
+	ind.addTemplate("root", t1)
 
-	if ind["root"].Name != "root" {
+	if ind.getNode("root").Name != "root" {
 		t.Fatalf("Did not add template %v", ind)
 	}
 
-	if ind["root > sub"].Name != "sub" {
-		t.Fatalf("Did not add template %v", *ind["root > sub"].Template)
+	if ind.getNode("root > sub").Name != "sub" {
+		t.Fatalf("Did not add template %v", *ind.getNode("root > sub").Template)
 	}
 
 	t2 := Template{Name: "sub2", Extends: "root > sub"}
-	ind.addTemplate("sub2", &t2)
+	ind.addTemplate("sub2", t2)
 
-	if ind["sub2"].Extends != "root > sub" {
-		t.Fatalf("Did capture the extends field %v", *ind["sub2"].Template)
+	if ind.getNode("sub2").Extends != "root > sub" {
+		t.Fatalf("Did capture the extends field %v", *ind.getNode("sub2").Template)
+	}
+}
+
+func TestAddTemplateImmutability(t *testing.T) {
+	// want to make sure we made a copy of all templates added to the index so
+	// they cannot be changed from the outside
+	ind := newTemplateIndex()
+	orig := Template{
+		Name: "root",
+		Children: map[string]*Template{
+			"sub": &Template{
+				Name: "sub",
+			},
+		},
+	}
+	node := ind.addTemplate("root", orig)
+
+	orig.Name = "something_else"
+	orig.Children["sub"].Name = "some_other_sub_name"
+
+	if node.Template.Name != "root" {
+		t.Fatalf("Client changed root template after adding it to the index, '%v'", node.Template)
+	}
+	if node.Template.Children["sub"].Name != "sub" {
+		t.Fatalf("Client changed root child template after adding it to the index, '%v'", node.Template.Children["sub"])
 	}
 }
 
 func TestSubstitueTemplate(t *testing.T) {
-	ind := make(templateIndex)
+	ind := newTemplateIndex()
 	t1 := Template{
 		Name: "root",
 		Children: map[string]*Template{
@@ -42,7 +68,7 @@ func TestSubstitueTemplate(t *testing.T) {
 			},
 		},
 	}
-	node := ind.addTemplate("root", &t1)
+	node := ind.addTemplate("root", t1)
 
 	t2 := Template{Name: "sub2", Extends: "root > sub"}
 
@@ -62,7 +88,7 @@ func TestSubstitueTemplate(t *testing.T) {
 }
 
 func TestLinkTemplates(t *testing.T) {
-	ind := make(templateIndex)
+	ind := newTemplateIndex()
 	t1 := Template{
 		Name: "root",
 		Children: map[string]*Template{
@@ -73,24 +99,24 @@ func TestLinkTemplates(t *testing.T) {
 	}
 	t2 := Template{Name: "sub2", Extends: "root > sub"}
 
-	ind.addTemplate("root", &t1)
-	ind.addTemplate("sub2", &t2)
+	ind.addTemplate("root", t1)
+	ind.addTemplate("sub2", t2)
 
 	ind.linkTemplates()
 
-	if ind["sub2"].extends.Name != "sub" {
-		t.Fatalf("Invalid parent of extending template '%s'", ind["sub2"].parent.Name)
+	if ind.getNode("sub2").extends.Name != "sub" {
+		t.Fatalf("Invalid parent of extending template '%s'", ind.getNode("sub2").parent.Name)
 	}
 
-	if ind["root > sub"].parent.Name != "root" {
-		t.Fatalf("Invalid parent of child template '%s'", ind["child > sub"].parent.Name)
+	if ind.getNode("root > sub").parent.Name != "root" {
+		t.Fatalf("Invalid parent of child template '%s'", ind.getNode("child > sub").parent.Name)
 	}
 
-	if ind["root > sub"].extends != nil {
+	if ind.getNode("root > sub").extends != nil {
 		t.Fatal("Child node should not have an extended template prop")
 	}
 
-	if ind["root"].parent != nil {
+	if ind.getNode("root").parent != nil {
 		t.Fatal("Root node should not have a parent")
 	}
 }
@@ -100,7 +126,7 @@ func TestExportRootTemplate(t *testing.T) {
 		node *templNode
 		tpl  *Template
 	)
-	ind := make(templateIndex)
+	ind := newTemplateIndex()
 	t1 := Template{
 		Name: "root",
 		Children: map[string]*Template{
@@ -111,26 +137,44 @@ func TestExportRootTemplate(t *testing.T) {
 	}
 	t2 := Template{Name: "sub2", Extends: "root > sub"}
 
-	ind.addTemplate("sub2", &t2)
-	ind.addTemplate("root", &t1)
+	ind.addTemplate("sub2", t2)
+	ind.addTemplate("root", t1)
+	ind.getTemplate("root").Handler = func(w ResponseWriter, r *http.Request) {}
+	ind.getTemplate("root > sub").Handler = func(w ResponseWriter, r *http.Request) {}
+	ind.getTemplate("sub2").Handler = func(w ResponseWriter, r *http.Request) {}
 	ind.linkTemplates()
 
-	node = ind["root"]
+	node = ind.getNode("root")
 	tpl = node.exportRootTemplate()
 	if tpl.Name != "root" {
 		t.Fatalf("'root' node did not export the correct template, %v", tpl)
 	}
+	if tpl.Handler == nil {
+		t.Fatalf("'root' template does not have a handler defined, %v", tpl)
+	}
 
-	node = ind["root > sub"]
+	node = ind.getNode("root > sub")
 	tpl = node.exportRootTemplate()
 	if tpl.Children["sub"].Name != "sub" {
 		t.Fatalf("'root > sub' node did not export the correct template, %v", tpl)
 	}
+	if tpl.Handler == nil {
+		t.Fatalf("extended 'root' template does not have a handler defined, %v", tpl)
+	}
+	if tpl.Children["sub"].Handler == nil {
+		t.Fatalf("'sub' template does not have a handler defined, %v", tpl)
+	}
 
-	node = ind["sub2"]
+	node = ind.getNode("sub2")
 	tpl = node.exportRootTemplate()
 	if tpl.Children["sub"].Name != "sub2" {
 		t.Fatalf("'sub2' node did not return the correct template, %v", tpl)
+	}
+	if tpl.Handler == nil {
+		t.Fatalf("extended 'root' template does not have a handler defined, %v", tpl)
+	}
+	if tpl.Children["sub"].Handler == nil {
+		t.Fatalf("'sub2' template does not have a handler defined, %v", tpl)
 	}
 }
 
@@ -139,7 +183,7 @@ func TestExportRootTemplateMutiExtend(t *testing.T) {
 		node *templNode
 		tpl  *Template
 	)
-	ind := make(templateIndex)
+	ind := newTemplateIndex()
 	t1 := Template{
 		Name: "root",
 		Children: map[string]*Template{
@@ -162,12 +206,12 @@ func TestExportRootTemplateMutiExtend(t *testing.T) {
 		Extends: "sub2 > sub_sub",
 	}
 
-	ind.addTemplate("sub2", &t2)
-	ind.addTemplate("sub3", &t3)
-	ind.addTemplate("root", &t1)
+	ind.addTemplate("sub2", t2)
+	ind.addTemplate("sub3", t3)
+	ind.addTemplate("root", t1)
 	ind.linkTemplates()
 
-	node = ind["sub3"]
+	node = ind.getNode("sub3")
 	tpl = node.exportRootTemplate()
 
 	if tpl.Name != "root" {

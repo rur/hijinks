@@ -7,15 +7,12 @@ import (
 // Most stupid thing that might work
 // implements both the Renderer and Configure interfaces
 type naiveImpl struct {
-	index templateIndex
-	pages Pages
+	index *templateIndex
+	pages map[string]*Template
 }
 
 func (n *naiveImpl) Handler(path string) http.HandlerFunc {
-	node, ok := n.index[path]
-	if !ok {
-		panic("Unable to create hijinks handler, template not found: " + path)
-	}
+	node := n.index.getNode(path)
 	// the following templates are used to render a full page
 	document := node.exportRootTemplate()
 	// the following is used for only the specific partial
@@ -45,35 +42,35 @@ func (n *naiveImpl) Sub(cfgs ...ConfigFunc) (Renderer, error) {
 }
 
 func (n *naiveImpl) AddHandler(path string, handler HijinksHandler) {
-	node, ok := n.index[path]
-	if ok != true {
-		panic("no pages found here!")
-	}
-	node.Template.Handler = handler
+	n.index.getTemplate(path).Handler = handler
 }
 
 func (n *naiveImpl) AddPages(p Pages) {
 	for name, _ := range p {
-		templ := p[name]
-		n.index.addTemplate(name, &templ)
-		n.pages[name] = p[name]
+		n.index.addTemplate(name, p[name])
+		t := n.index.getTemplate(name)
+		n.pages[name] = t
 	}
 	n.index.linkTemplates()
 }
 
-func (n *naiveImpl) dup() *naiveImpl {
-	d := naiveImpl{make(templateIndex), make(Pages)}
-	d.AddPages(n.pages)
-	return &d
-}
-
-func NewNaiveRenderer(c ...ConfigFunc) (Renderer, error) {
-	r := naiveImpl{make(templateIndex), make(Pages)}
+func NewRenderer(c ...ConfigFunc) (Renderer, error) {
+	r := naiveImpl{newTemplateIndex(), make(map[string]*Template)}
 	err := r.configure(c...)
 	if err != nil {
 		return nil, err
 	}
 	return &r, nil
+}
+
+func (n *naiveImpl) dup() *naiveImpl {
+	d := naiveImpl{newTemplateIndex(), make(map[string]*Template)}
+	pages := make(Pages)
+	for name, templ := range n.pages {
+		pages[name] = *templ
+	}
+	d.AddPages(pages)
+	return &d
 }
 
 func (n *naiveImpl) configure(cfgs ...ConfigFunc) error {

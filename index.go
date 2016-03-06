@@ -59,34 +59,53 @@ func (t *templNode) substitueTemplate(name string, child *Template) *Template {
 
 // index template node by their path eg. "a > b > c"
 
-type templateIndex map[string]*templNode
-
-func (ti templateIndex) addTemplate(path string, t *Template) *templNode {
-	// create new node with back reference to parent template node
-	nt := templNode{t, nil, nil}
-	for name, cld := range t.Children {
-		ct := ti.addTemplate(path+" > "+name, cld)
-		ct.parent = &nt
-	}
-	ti[path] = &nt
-	return &nt
+type templateIndex struct {
+	index map[string]*templNode
 }
 
-func (ti templateIndex) linkTemplates() {
+func (t *templateIndex) getTemplate(path string) *Template {
+	return t.getNode(path).Template
+}
+
+func (t *templateIndex) getNode(path string) *templNode {
+	node, ok := t.index[path]
+	if !ok {
+		panic(fmt.Sprintf("Hijinks: No template found with path '%s'", path))
+	}
+	return node
+}
+
+func (ti *templateIndex) addTemplate(path string, t Template) *templNode {
+	// create new node with back reference to parent template node
+	// shallow copy the config so it cannot be changed by the client holding
+	nt := &templNode{&t, nil, nil}
+	ch := make(map[string]*Template)
+
+	for name, cld := range t.Children {
+		ct := ti.addTemplate(path+" > "+name, *cld)
+		ct.parent = nt
+		ch[name] = ct.Template
+	}
+	nt.Template.Children = ch
+
+	ti.index[path] = nt
+	return nt
+}
+
+func (ti *templateIndex) linkTemplates() {
 	// populate .extends property of page templNodes (those without a parent)
 	// this is a separate step from adding template nodes so that the order
 	// they are added wont matter
-	for path, node := range ti {
+	for _, node := range ti.index {
 		t := node.Template
 		if node.parent == nil && t.Extends != "" {
-			if extends, ok := ti[t.Extends]; ok {
-				node.extends = extends
-				if extends.parent == nil {
-					panic(fmt.Sprintf("Hinjinks Template '%s' cannot extend a page template '%s'", path, t.Extends))
-				}
-			} else {
-				panic(fmt.Sprintf("Hijinks Template '%s' cannot extend '%s', template not found", path, t.Extends))
-			}
+			node.extends = ti.getNode(t.Extends)
 		}
+	}
+}
+
+func newTemplateIndex() *templateIndex {
+	return &templateIndex{
+		make(map[string]*templNode),
 	}
 }
