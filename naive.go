@@ -44,12 +44,12 @@ func (n *naiveImpl) Sub(cfgs ...ConfigFunc) (Renderer, error) {
 	return sub, nil
 }
 
-func (n *naiveImpl) AddHandler(name string, handler HijinksHandler) {
-	templ, ok := n.pages[name]
+func (n *naiveImpl) AddHandler(path string, handler HijinksHandler) {
+	node, ok := n.index[path]
 	if ok != true {
 		panic("no pages found here!")
 	}
-	templ.Handler = handler
+	node.Template.Handler = handler
 }
 
 func (n *naiveImpl) AddPages(p Pages) {

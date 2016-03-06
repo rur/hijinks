@@ -22,10 +22,10 @@ func (w *hjResponseWriter) Data(d interface{}) {
 
 func (w *hjResponseWriter) Delegate(n string, r *http.Request) (interface{}, bool) {
 	var (
-		templ Template
+		templ *Template
 		ok    bool
 	)
-	templ = *w.template
+	templ = w.template
 	names := strings.Split(strings.TrimSpace(n), " > ")
 	for _, name := range names {
 		if templ, ok = templ.Children[name]; !ok {
@@ -34,7 +34,7 @@ func (w *hjResponseWriter) Delegate(n string, r *http.Request) (interface{}, boo
 	}
 	dw := hjResponseWriter{
 		ResponseWriter: w.ResponseWriter,
-		template:       &templ,
+		template:       templ,
 	}
 	return dw.loadData(r)
 }
@@ -73,7 +73,7 @@ func aggregateTemplateFiles(t *Template) []string {
 	// TODO: consider how this list of templates should be ordered,
 	//       because this isn't right
 	for _, tpl := range t.Children {
-		tpls = append(tpls, aggregateTemplateFiles(&tpl)...)
+		tpls = append(tpls, aggregateTemplateFiles(tpl)...)
 	}
 	return tpls
 }

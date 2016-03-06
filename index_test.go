@@ -8,8 +8,8 @@ func TestAddTemplate(t *testing.T) {
 	ind := make(templateIndex)
 	t1 := Template{
 		Name: "root",
-		Children: map[string]Template{
-			"sub": Template{
+		Children: map[string]*Template{
+			"sub": &Template{
 				Name: "sub",
 			},
 		},
@@ -36,8 +36,8 @@ func TestSubstitueTemplate(t *testing.T) {
 	ind := make(templateIndex)
 	t1 := Template{
 		Name: "root",
-		Children: map[string]Template{
-			"sub": Template{
+		Children: map[string]*Template{
+			"sub": &Template{
 				Name: "sub",
 			},
 		},
@@ -65,8 +65,8 @@ func TestLinkTemplates(t *testing.T) {
 	ind := make(templateIndex)
 	t1 := Template{
 		Name: "root",
-		Children: map[string]Template{
-			"sub": Template{
+		Children: map[string]*Template{
+			"sub": &Template{
 				Name: "sub",
 			},
 		},
@@ -103,8 +103,8 @@ func TestExportRootTemplate(t *testing.T) {
 	ind := make(templateIndex)
 	t1 := Template{
 		Name: "root",
-		Children: map[string]Template{
-			"sub": Template{
+		Children: map[string]*Template{
+			"sub": &Template{
 				Name: "sub",
 			},
 		},
@@ -142,8 +142,8 @@ func TestExportRootTemplateMutiExtend(t *testing.T) {
 	ind := make(templateIndex)
 	t1 := Template{
 		Name: "root",
-		Children: map[string]Template{
-			"sub": Template{
+		Children: map[string]*Template{
+			"sub": &Template{
 				Name: "sub",
 			},
 		},
@@ -151,8 +151,8 @@ func TestExportRootTemplateMutiExtend(t *testing.T) {
 	t2 := Template{
 		Name:    "sub2",
 		Extends: "root > sub",
-		Children: map[string]Template{
-			"sub_sub": Template{
+		Children: map[string]*Template{
+			"sub_sub": &Template{
 				Name: "sub_sub",
 			},
 		},

@@ -40,14 +40,14 @@ func TestNaiveRenderer(t *testing.T) {
 	page := Template{
 		Name: "test",
 		File: pth,
-		Handler: func(w ResponseWriter, r *http.Request) {
-			w.Data(cons{Data: 1, Next: &cons{Data: 2}})
-		},
 	}
 	pages["test"] = page
 
 	r, err := NewNaiveRenderer(func(c Configure) error {
 		c.AddPages(pages)
+		c.AddHandler("test", func(w ResponseWriter, r *http.Request) {
+			w.Data(cons{Data: 1, Next: &cons{Data: 2}})
+		})
 		return nil
 	})
 
@@ -89,7 +89,18 @@ func TestNaiveRendererWithChildren(t *testing.T) {
 	page := Template{
 		Name: "test",
 		File: pth + "base.templ.html",
-		Handler: func(w ResponseWriter, r *http.Request) {
+		Children: map[string]*Template{
+			"sub": &Template{
+				Name: "sub",
+				File: pth + "sub.templ.html",
+			},
+		},
+	}
+	pages["test"] = page
+
+	r, err := NewNaiveRenderer(func(c Configure) error {
+		c.AddPages(pages)
+		c.AddHandler("test", func(w ResponseWriter, r *http.Request) {
 			d, loaded := w.Delegate("sub", r)
 			if !loaded {
 				// no model was loaded, do nothing
@@ -100,21 +111,10 @@ func TestNaiveRendererWithChildren(t *testing.T) {
 				log.Fatalf("Handler delegate did not output a 'cons' type")
 			}
 			w.Data(cons{Data: 1, Next: &sub})
-		},
-		Children: map[string]Template{
-			"sub": Template{
-				Name: "sub",
-				File: pth + "sub.templ.html",
-				Handler: func(w ResponseWriter, r *http.Request) {
-					w.Data(cons{Data: 2})
-				},
-			},
-		},
-	}
-	pages["test"] = page
-
-	r, err := NewNaiveRenderer(func(c Configure) error {
-		c.AddPages(pages)
+		})
+		c.AddHandler("test > sub", func(w ResponseWriter, r *http.Request) {
+			w.Data(cons{Data: 2})
+		})
 		return nil
 	})
 
@@ -168,8 +168,8 @@ func TestNaiveRendererExtendedPages(t *testing.T) {
 				log.Fatalf("Handler delegate did not output a 'cons' type")
 			}
 		},
-		Children: map[string]Template{
-			"content": Template{
+		Children: map[string]*Template{
+			"content": &Template{
 				Name: "content",
 			},
 		},
@@ -247,8 +247,8 @@ func TestNaiveRendererMultipleExtendedPages(t *testing.T) {
 			}
 			w.Data(cons{Data: 1, Next: &sub})
 		},
-		Children: map[string]Template{
-			"content": Template{
+		Children: map[string]*Template{
+			"content": &Template{
 				Name: "content",
 			},
 		},
@@ -266,8 +266,8 @@ func TestNaiveRendererMultipleExtendedPages(t *testing.T) {
 			}
 			w.Data(d)
 		},
-		Children: map[string]Template{
-			"content": Template{
+		Children: map[string]*Template{
+			"content": &Template{
 				Name: "content",
 			},
 		},

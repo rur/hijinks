@@ -47,15 +47,15 @@ func TestDataDelegateWriter(t *testing.T) {
 			Handler: func(w ResponseWriter, r *http.Request) {
 				w.Data(1)
 			},
-			Children: map[string]Template{
-				"sub": Template{
+			Children: map[string]*Template{
+				"sub": &Template{
 					Name: "sub",
 					File: pth + "sub.templ.html",
 					Handler: func(w ResponseWriter, r *http.Request) {
 						w.Data(2)
 					},
-					Children: map[string]Template{
-						"sub": Template{
+					Children: map[string]*Template{
+						"sub": &Template{
 							Name: "sub",
 							File: pth + "sub_sub.templ.html",
 							Handler: func(w ResponseWriter, r *http.Request) {

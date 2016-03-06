@@ -33,10 +33,10 @@ func (y *yamlDef) mapToTemplate() *Template {
 		Name:     y.Name,
 		Extends:  y.Extends,
 		File:     y.File,
-		Children: make(map[string]Template),
+		Children: make(map[string]*Template),
 	}
 	for _, def := range y.Children {
-		t.Children[def.Name] = *def.mapToTemplate()
+		t.Children[def.Name] = def.mapToTemplate()
 	}
 	return &t
 }

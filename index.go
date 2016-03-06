@@ -44,12 +44,12 @@ func (t *templNode) substitueTemplate(name string, child *Template) *Template {
 		Name:     old.Name,
 		File:     old.File,
 		Handler:  old.Handler,
-		Children: make(map[string]Template),
+		Children: make(map[string]*Template),
 	}
 	// swap out the extended child
 	for n, ch := range old.Children {
 		if n == name {
-			nue.Children[n] = *child
+			nue.Children[n] = child
 		} else {
 			nue.Children[n] = ch
 		}
@@ -65,7 +65,7 @@ func (ti templateIndex) addTemplate(path string, t *Template) *templNode {
 	// create new node with back reference to parent template node
 	nt := templNode{t, nil, nil}
 	for name, cld := range t.Children {
-		ct := ti.addTemplate(path+" > "+name, &cld)
+		ct := ti.addTemplate(path+" > "+name, cld)
 		ct.parent = &nt
 	}
 	ti[path] = &nt

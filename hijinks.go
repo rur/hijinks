@@ -7,7 +7,7 @@ type Template struct {
 	Name     string
 	File     string
 	Handler  HijinksHandler
-	Children map[string]Template
+	Children map[string]*Template
 }
 
 type Pages map[string]Template
