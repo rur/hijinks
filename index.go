@@ -14,6 +14,8 @@ type templNode struct {
 }
 
 func (n *templNode) exportRootTemplate() *Template {
+	// export the root ancestor of the current node
+	// according to declared inheritance.
 	node := n
 	templ := n.Template
 	name := templ.Name
@@ -71,11 +73,10 @@ func (ti templateIndex) addTemplate(path string, t *Template) *templNode {
 }
 
 func (ti templateIndex) linkTemplates() {
-	// populate .extends property of page templNodes (those wo a parent)
+	// populate .extends property of page templNodes (those without a parent)
 	// this is a separate step from adding template nodes so that the order
 	// they are added wont matter
-	for path, _ := range ti {
-		node := ti[path]
+	for path, node := range ti {
 		t := node.Template
 		if node.parent == nil && t.Extends != "" {
 			if extends, ok := ti[t.Extends]; ok {

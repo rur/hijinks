@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"strings"
 )
 
 type hjResponseWriter struct {
@@ -20,16 +21,22 @@ func (w *hjResponseWriter) Data(d interface{}) {
 }
 
 func (w *hjResponseWriter) Delegate(n string, r *http.Request) (interface{}, bool) {
-	// TODO: this should support delegating to children of children using '>' syntax
-	if templ, ok := w.template.Children[n]; ok {
-		dw := hjResponseWriter{
-			ResponseWriter: w.ResponseWriter,
-			template:       &templ,
+	var (
+		templ Template
+		ok    bool
+	)
+	templ = *w.template
+	names := strings.Split(strings.TrimSpace(n), " > ")
+	for _, name := range names {
+		if templ, ok = templ.Children[name]; !ok {
+			panic(fmt.Sprintf("Hijinks Delegate call did not match any template children '%s'", n))
 		}
-		return dw.loadData(r)
-	} else {
-		panic(fmt.Sprintf("Hijinks Delegate call did not match any template children '%s'", n))
 	}
+	dw := hjResponseWriter{
+		ResponseWriter: w.ResponseWriter,
+		template:       &templ,
+	}
+	return dw.loadData(r)
 }
 
 func (w *hjResponseWriter) loadData(r *http.Request) (interface{}, bool) {
