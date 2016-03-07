@@ -54,7 +54,7 @@ func NewRootHandler(fsRoot string, sessionKey []byte) *RootHandler {
 		log.Fatalf("Error configuring renderer: %v", err)
 	}
 
-	r.HandleFunc("/", renderer.Handler("base")).
+	r.HandleFunc("/", renderer.Handler("base > content")).
 		Methods("GET")
 
 	r.HandleFunc("/list", renderer.Handler("list")).

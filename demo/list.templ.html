@@ -1,7 +1,12 @@
+{{block "title" .}}<title>Homepage - List</title>{{end}}
+
 {{block "content-list" . -}}
-<ul id="content-list">
-  {{range $key, $value := . -}}
-  <li> <h4>The Key: {{$key}}</h4><p>The Value = {{$value}}</p></li>
-  {{end}}
-</ul>
+<div id="content-list">
+  <p><a href="/" hijinks>Hide list</a></p>
+  <ul>
+    {{range $key, $value := . -}}
+    <li> <h4>The Key: {{$key}}</h4><p>The Value = {{$value}}</p></li>
+    {{end}}
+  </ul>
+</div>
 {{- end}}
