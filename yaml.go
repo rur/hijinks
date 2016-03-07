@@ -2,6 +2,7 @@ package hijinks
 
 import (
 	"gopkg.in/yaml.v2"
+	"path"
 )
 
 type yamlDef struct {
@@ -11,7 +12,7 @@ type yamlDef struct {
 	Children []yamlDef
 }
 
-func YAML(data []byte) ConfigFunc {
+func YAML(data []byte, base string) ConfigFunc {
 	return func(config Configure) error {
 		var defs map[string]yamlDef
 		if err := yaml.Unmarshal(data, &defs); err != nil {
@@ -20,7 +21,7 @@ func YAML(data []byte) ConfigFunc {
 		pages := make(Pages)
 		for name, def := range defs {
 			def.Name = name
-			pages[name] = *def.mapToTemplate()
+			pages[name] = *def.mapToTemplate(base)
 		}
 
 		config.AddPages(pages)
@@ -28,15 +29,17 @@ func YAML(data []byte) ConfigFunc {
 	}
 }
 
-func (y *yamlDef) mapToTemplate() *Template {
+func (y *yamlDef) mapToTemplate(base string) *Template {
 	t := Template{
 		Name:     y.Name,
 		Extends:  y.Extends,
-		File:     y.File,
 		Children: make(map[string]*Template),
 	}
+	if y.File != "" {
+		t.File = path.Join(base, y.File)
+	}
 	for _, def := range y.Children {
-		t.Children[def.Name] = def.mapToTemplate()
+		t.Children[def.Name] = def.mapToTemplate(base)
 	}
 	return &t
 }

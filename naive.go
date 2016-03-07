@@ -41,7 +41,7 @@ func (n *naiveImpl) Sub(cfgs ...ConfigFunc) (Renderer, error) {
 	return sub, nil
 }
 
-func (n *naiveImpl) AddHandler(path string, handler HijinksHandler) {
+func (n *naiveImpl) AddHandler(path string, handler HandlerFunc) {
 	n.index.getTemplate(path).Handler = handler
 }
 

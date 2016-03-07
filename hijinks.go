@@ -6,7 +6,7 @@ type Template struct {
 	Extends  string
 	Name     string
 	File     string
-	Handler  HijinksHandler
+	Handler  HandlerFunc
 	Children map[string]*Template
 }
 
@@ -14,7 +14,7 @@ type Pages map[string]Template
 
 type Configure interface {
 	// set the handler associated with a template
-	AddHandler(string, HijinksHandler)
+	AddHandler(string, HandlerFunc)
 	// add a new template definition
 	AddPages(Pages)
 }
@@ -27,7 +27,7 @@ type ResponseWriter interface {
 	Delegate(string, *http.Request) (interface{}, bool)
 }
 
-type HijinksHandler func(ResponseWriter, *http.Request)
+type HandlerFunc func(ResponseWriter, *http.Request)
 
 type ConfigFunc func(Configure) error
 

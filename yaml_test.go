@@ -12,7 +12,7 @@ func TestRenderYaml(t *testing.T) {
 	}
 
 	c := testConf{}
-	err = YAML(data)(&c)
+	err = YAML(data, "/path/to/templates")(&c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -29,7 +29,7 @@ func TestRenderYaml(t *testing.T) {
 		t.Errorf("Base Name not defined: %v", c.pages["base"].Name)
 	}
 
-	if c.pages["base"].File != "base.templ.html" {
+	if c.pages["base"].File != "/path/to/templates/base.templ.html" {
 		t.Errorf("Base file not defined: %v", c.pages["base"].File)
 	}
 
@@ -42,7 +42,7 @@ type testConf struct {
 	pages Pages
 }
 
-func (t *testConf) AddHandler(name string, fn HijinksHandler) {
+func (t *testConf) AddHandler(name string, fn HandlerFunc) {
 	// do nothing for now!
 }
 

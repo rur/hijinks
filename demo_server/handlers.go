@@ -1,8 +1,7 @@
 package demo_server
 
 import (
-	"html/template"
-	"log"
+	"github.com/rur/hijinks"
 	"net/http"
 )
 
@@ -12,33 +11,24 @@ type Cons struct {
 	Next *Cons
 }
 
-func fullPage(ctx server, w http.ResponseWriter, req *http.Request) {
-	t, err := template.ParseFiles(
-		ctx.fsRoot+"/assets/base.templ.html",
-		ctx.fsRoot+"/assets/sub.templ.html",
-	)
-	if err != nil {
-		log.Fatal(err)
+func baseHandler(ctx server, w hijinks.ResponseWriter, req *http.Request) {
+	d := Cons{Data: 1}
+	if sub, ok := w.Delegate("sub", req); ok {
+		d.Next = sub.(*Cons)
 	}
-
-	d := Cons{Data: 1, Next: &Cons{Data: 2}}
-
-	if err := t.Execute(w, d); err != nil {
-		log.Fatal(err)
-	}
+	w.Data(&d)
 }
 
-func pagePartial(ctx server, w http.ResponseWriter, req *http.Request) {
-	t, err := template.ParseFiles(
-		ctx.fsRoot + "/assets/sub.templ.html",
-	)
-	if err != nil {
-		log.Fatal(err)
+func baseSubHandler(ctx server, w hijinks.ResponseWriter, req *http.Request) {
+	d := Cons{Data: 2}
+	if d2, ok := w.Delegate("list", req); ok {
+		if list, ok := d2.([]int); ok {
+			d.List = list
+		}
 	}
+	w.Data(&d)
+}
 
-	d := Cons{Data: 1, Next: &Cons{Data: 2}}
-
-	if err := t.Execute(w, d); err != nil {
-		log.Fatal(err)
-	}
+func listHandler(ctx server, w hijinks.ResponseWriter, req *http.Request) {
+	w.Data([]int{1, 2, 3})
 }

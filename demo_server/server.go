@@ -3,6 +3,9 @@ package demo_server
 import (
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
+	"github.com/rur/hijinks"
+	"io/ioutil"
+	"log"
 	"net/http"
 )
 
@@ -22,8 +25,8 @@ type server struct {
 }
 
 // adds server context to handlers.
-func (s server) handler(f func(server, http.ResponseWriter, *http.Request)) http.HandlerFunc {
-	return func(w http.ResponseWriter, req *http.Request) {
+func (s server) handler(f func(server, hijinks.ResponseWriter, *http.Request)) hijinks.HandlerFunc {
+	return func(w hijinks.ResponseWriter, req *http.Request) {
 		f(s, w, req)
 	}
 }
@@ -35,10 +38,25 @@ func NewRootHandler(fsRoot string, sessionKey []byte) *RootHandler {
 	store := sessions.NewCookieStore(sessionKey)
 	server := server{router: r, url: handler.URL, fsRoot: fsRoot, store: store}
 
-	r.HandleFunc("/", server.handler(fullPage)).
+	data, err := ioutil.ReadFile(fsRoot + "/test/demo.yaml")
+	if err != nil {
+		log.Fatalf("Error loading YAML config: %v", err)
+	}
+	renderer, err := hijinks.NewRenderer(hijinks.YAML(data, fsRoot), func(c hijinks.Configure) error {
+		c.AddHandler("base", server.handler(baseHandler))
+		c.AddHandler("base > sub", server.handler(baseSubHandler))
+		c.AddHandler("list", server.handler(listHandler))
+		return nil
+	})
+
+	if err != nil {
+		log.Fatalf("Error configuring renderer: %v", err)
+	}
+
+	r.HandleFunc("/", renderer.Handler("base")).
 		Methods("GET")
 
-	r.HandleFunc("/sub", server.handler(pagePartial)).
+	r.HandleFunc("/list", renderer.Handler("list")).
 		Methods("GET")
 
 	return handler

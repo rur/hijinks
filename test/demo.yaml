@@ -1,0 +1,12 @@
+
+base:
+    file: assets/base.templ.html
+    children:
+        - name: sub
+          file: assets/sub.templ.html
+          children:
+            - name: list
+
+list:
+    extends: base > sub > list
+    file: assets/sub_list.templ.html
