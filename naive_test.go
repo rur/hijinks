@@ -34,7 +34,7 @@ func TestNaiveRenderer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	pth := wd + "/assets/base.templ.html"
+	pth := wd + "/test/base.templ.html"
 
 	pages := make(Pages)
 	page := Template{
@@ -83,7 +83,7 @@ func TestNaiveRendererWithChildren(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	pth := wd + "/assets/"
+	pth := wd + "/test/"
 
 	r, err := NewRenderer(func(c Configure) error {
 		c.AddPages(Pages{
@@ -150,7 +150,7 @@ func TestNaiveRendererExtendedPages(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	pth := wd + "/assets/"
+	pth := wd + "/test/"
 
 	pages := Pages{}
 	pages["base"] = Template{
@@ -229,7 +229,7 @@ func TestNaiveRendererMultipleExtendedPages(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	pth := wd + "/assets/"
+	pth := wd + "/test/"
 
 	pages := Pages{}
 	pages["base"] = Template{

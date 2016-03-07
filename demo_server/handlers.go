@@ -13,7 +13,7 @@ type Cons struct {
 
 func baseHandler(ctx server, w hijinks.ResponseWriter, req *http.Request) {
 	d := Cons{Data: 1}
-	if sub, ok := w.Delegate("sub", req); ok {
+	if sub, ok := w.Delegate("content", req); ok {
 		d.Next = sub.(*Cons)
 	}
 	w.Data(&d)

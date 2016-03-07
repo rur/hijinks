@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Try out Go 1.6 template blocks</title>
+  <script src="/hijinks.js"></script>
+</head>
+<body>
+  <h1>Title {{.Data}}</h1>
+  {{block "content" .Next }}
+  <p>Default data is {{.Data}}!</p>
+  {{end}}
+</body>
+</html>

@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"path"
 )
 
 // http listener struct
@@ -38,13 +39,13 @@ func NewRootHandler(fsRoot string, sessionKey []byte) *RootHandler {
 	store := sessions.NewCookieStore(sessionKey)
 	server := server{router: r, url: handler.URL, fsRoot: fsRoot, store: store}
 
-	data, err := ioutil.ReadFile(fsRoot + "/test/demo.yaml")
+	data, err := ioutil.ReadFile(fsRoot + "/demo/config.yaml")
 	if err != nil {
 		log.Fatalf("Error loading YAML config: %v", err)
 	}
-	renderer, err := hijinks.NewRenderer(hijinks.YAML(data, fsRoot), func(c hijinks.Configure) error {
+	renderer, err := hijinks.NewRenderer(hijinks.YAML(data, path.Join(fsRoot, "demo")), func(c hijinks.Configure) error {
 		c.AddHandler("base", server.handler(baseHandler))
-		c.AddHandler("base > sub", server.handler(baseSubHandler))
+		c.AddHandler("base > content", server.handler(baseSubHandler))
 		c.AddHandler("list", server.handler(listHandler))
 		return nil
 	})
@@ -59,5 +60,6 @@ func NewRootHandler(fsRoot string, sessionKey []byte) *RootHandler {
 	r.HandleFunc("/list", renderer.Handler("list")).
 		Methods("GET")
 
+	r.PathPrefix("/").Handler(http.FileServer(http.Dir(path.Join(fsRoot, "demo", "static"))))
 	return handler
 }

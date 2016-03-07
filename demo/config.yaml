@@ -1,0 +1,12 @@
+
+base:
+    file: base.templ.html
+    children:
+        - name: content
+          file: content.templ.html
+          children:
+            - name: list
+
+list:
+    extends: base > content > list
+    file: list.templ.html

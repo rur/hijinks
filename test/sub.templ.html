@@ -1,5 +1,6 @@
 {{block "sub" .}}
   <div>Test value = {{.Data}}</div>
+  <p><a href="/list">Show list</a></p>
   <ul>
     {{range $key, $value := .List -}}
     <li> <h4>The Key: {{$key}}</h4>{{block "sub_list" $value}} <p>Default item = {{.}}</p> {{end}}</li>

@@ -16,14 +16,15 @@ func (n *naiveImpl) Handler(path string) http.HandlerFunc {
 	// the following templates are used to render a full page
 	document := node.exportRootTemplate()
 	// the following is used for only the specific partial
-	// partial := node.Template
-	//
+	partial := node.Template
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		var templ *Template
-		// TODO: Check request headers for a hijinks flag to only render partial
-		// 	 instead of the full document
-		templ = document
+		if r.Header.Get("X-Hijinks") == "partial" {
+			templ = partial
+		} else {
+			templ = document
+		}
 		hw := hjResponseWriter{ResponseWriter: w, template: templ}
 		model, ok := hw.loadData(r)
 		if ok {
