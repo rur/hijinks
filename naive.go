@@ -13,9 +13,7 @@ type naiveImpl struct {
 
 func (n *naiveImpl) Handler(path string) http.HandlerFunc {
 	node := n.index.getNode(path)
-	// the following templates are used to render a full page
 	document := node.exportRootTemplate()
-	// the following is used for only the specific partial
 	partial := node.Template
 
 	return func(w http.ResponseWriter, r *http.Request) {
