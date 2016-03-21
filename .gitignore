@@ -6,3 +6,4 @@
 .DS_Store
 ._*
 local_scripts
+node_modules

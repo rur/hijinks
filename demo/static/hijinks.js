@@ -1,4 +1,4 @@
-(function (global) {
+(function (window, document, history) {
   var bindToElement = {},
       bindToAttribute = {},
       SINGLETONS = ["title"];  // tags for which there can be only one in a doc (no incl html, head, body)
@@ -280,7 +280,7 @@
   }())
 
   // replace existing
-  global.hijinks = new Hijinks(global.hijinks);
+  window.hijinks = new Hijinks(window.hijinks);
 
   (function() {
     var el = document;
@@ -318,6 +318,5 @@
         window.attachEvent('onload', initialize);
       }
     }
-
   }());
-}(window));
+}(window, window.document, window.history));
