@@ -4,11 +4,38 @@
   <meta charset="UTF-8">
   {{block "title" .}}<title>Base Page!</title>{{end}}
   <script src="/hijinks.js"></script>
+
+  <style>
+  #counter {
+    position: absolute;
+    top: 0px;
+    right: 0px;
+    padding: 1em;
+    font-size: 1.2em;
+  }
+  </style>
 </head>
 <body>
+  <div id="counter"></div>
   <h1>Title {{.Data}}</h1>
   {{block "content" .Next }}
   <p>Default data is {{.Data}}!</p>
   {{end}}
+
+  <script type="text/javascript">
+    window.onload = function () {
+      var el = document.getElementById("counter");
+      function tick() {
+        var n = parseInt(el.textContent);
+        if (isNaN(n)) {
+          n = 0;
+        }
+        el.textContent = n + 1;
+        setTimeout(tick, 1000);
+      }
+
+      tick();
+    }
+  </script>
 </body>
 </html>

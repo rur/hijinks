@@ -1,13 +1,8 @@
 {
-  "name": "hijinks",
-  "version": "0.1.0",
-  "description": "JavaScript library for Hijinks framework",
-  "main": "hijinks.js",
+  "private": true,
   "scripts": {
     "test": "mocha ./js/ --require js/spec_setup.js --compilers coffee:coffee-script/register"
   },
-  "author": "Ruaidhri Devery",
-  "license": "ISC",
   "devDependencies": {
     "chai": "^3.5.0",
     "coffee-script": "^1.10.0",
