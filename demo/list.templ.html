@@ -4,9 +4,13 @@
 <div id="content-list">
   <p><a href="/" hijinks>Hide list</a></p>
   <ul>
-    {{range $key, $value := . -}}
-    <li> <h4>The Key: {{$key}}</h4><p>The Value = {{$value}}</p></li>
+    {{hijinksGroup "content-list" false }}
+    {{range $item := . -}}
+    {{block "content-list-item" $item -}}
+    <li id="list-item-{{.Key}}" data-hijinks-group="content-list">{{.Value}}</li>
+    {{- end}}
     {{end}}
   </ul>
+  <form action="list" method="POST" hijinks><input type="text" name="value" placeholder="Enter item here!"></form>
 </div>
 {{- end}}

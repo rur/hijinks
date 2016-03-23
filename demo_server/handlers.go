@@ -5,9 +5,14 @@ import (
 	"net/http"
 )
 
+type Item struct {
+	Key   int
+	Value string
+}
+
 type cons struct {
 	Data int
-	List []int
+	List []Item
 	Next *cons
 }
 
@@ -22,7 +27,7 @@ func baseHandler(ctx server, w hijinks.ResponseWriter, req *http.Request) {
 func baseSubHandler(ctx server, w hijinks.ResponseWriter, req *http.Request) {
 	d := cons{Data: 2}
 	if d2, ok := w.Delegate("list", req); ok {
-		if list, ok := d2.([]int); ok {
+		if list, ok := d2.([]Item); ok {
 			d.List = list
 		}
 	}
@@ -30,5 +35,9 @@ func baseSubHandler(ctx server, w hijinks.ResponseWriter, req *http.Request) {
 }
 
 func listHandler(ctx server, w hijinks.ResponseWriter, req *http.Request) {
-	w.Data([]int{1, 2, 3})
+	w.Data([]Item{
+		{1, "this is item 1"},
+		{2, "this is item 2"},
+		{3, "this is item 3"},
+	})
 }

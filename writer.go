@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"path/filepath"
 	"strings"
 )
 
@@ -53,12 +54,22 @@ func (w *hjResponseWriter) loadData(r *http.Request) (interface{}, bool) {
 func (w *hjResponseWriter) executeTemplate(data interface{}) {
 	files := aggregateTemplateFiles(w.template)
 
-	t, err := template.ParseFiles(files...)
+	funcMap := template.FuncMap{
+		"hijinksGroup": func(name string, prepend bool) template.HTML {
+			prep := ""
+			if prepend {
+				prep = " prepend"
+			}
+			return template.HTML(fmt.Sprintf("<!-- hijinks-group: %s%s -->", name, prep))
+		},
+	}
+
+	t, err := template.New("__init__").Funcs(funcMap).ParseFiles(files...)
 	if err != nil {
 		log.Fatal("Error parsing files: ", err)
 	}
 
-	if err := t.Execute(w, data); err != nil {
+	if err := t.ExecuteTemplate(w, filepath.Base(files[0]), data); err != nil {
 		log.Fatal(err)
 	}
 }
