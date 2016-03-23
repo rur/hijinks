@@ -1,46 +1,71 @@
 (function (window, document, history) {
   var bindToElement = {},
       bindToAttribute = {},
-      SINGLETONS = ["title"];  // tags for which there can be only one in a doc (no incl html, head, body)
+      hijinksGroups = {},
+      SINGLETONS = ["title"],   // tags for which there can be only one in a doc (no incl html, head, body)
+      HJ_GROUP_REG = /^\s+hijinks-group: ([a-zA-Z][\w-\d]*)( pending)?\s+$/,
+      MOUNT = "mount",
+      UNMOUNT = "unmount";
 
-  function mountElement(el) {
-    for (var i = el.children.length - 1; i >= 0; i--) {
-      mountElement(el.children[i]);
+  function bindElementChildren(event, children) {
+    var el;
+    for (var i = children.length - 1; i >= 0; i--) {
+      var el = children[i];
+      bindElement(event, el);
     }
-    var name = el.tagName.toLowerCase(),
-        fns = [];
-    if (name in bindToElement) {
-      fns.push(bindToElement[name]);
-    }
-    for (var i = el.attributes.length - 1; i >= 0; i--) {
-      name = el.attributes[i].name.toLowerCase();
-      if (name in bindToAttribute) {
-        fns.push(bindToAttribute[name]);
-      }
-    }
-    fns.forEach(function (f) {
-      f(el);
-    });
   }
 
-  function unmountElement(el) {
-    for (var i = el.children.length - 1; i >= 0; i--) {
-      unmountElement(el.children[i]);
+  function bindElement(event, el) {
+    var name, fns = [], i;
+    if (el["__hijinks_" + event +"ed__"]) {
+      return;
     }
-    var name = el.tagName.toLowerCase(),
-        fns = [];
-    if (name in bindToElement) {
-      fns.push(bindToElement[name]);
+
+    switch (el.nodeType) {
+      case Node.COMMENT_NODE:
+        var conf = el.nodeValue.match(HJ_GROUP_REG);
+        if (conf) {
+          switch (event) {
+            case MOUNT:
+              hijinksGroups[conf[1]] = {
+                element: el,
+                prepend: conf[2] === " prepend"
+              };
+              break;
+
+            case UNMOUNT:
+              if (hijinksGroups[conf[1]].element === el) {
+                delete hijinksGroups[conf[1]];
+              }
+              break;
+          }
+        }
+        break;
+
+      case Node.ELEMENT_NODE:
+      case Node.DOCUMENT_NODE:
+        bindElementChildren(event, el.childNodes);
+        name = el.tagName.toLowerCase()
+        if (
+          bindToElement.hasOwnProperty(name) &&
+          bindToElement[name].hasOwnProperty(event) &&
+          typeof bindToElement[name][event] === "function"
+        ){
+          fns.push(bindToElement[name][event]);
+        }
+        for (i = el.attributes.length - 1; i >= 0; i--) {
+          name = el.attributes[i].name.toLowerCase();
+          if (name in bindToAttribute) {
+            fns.push(bindToAttribute[name]);
+          }
+        }
+        fns.forEach(function (f) {
+          f(el);
+        });
+        el["__hijinks_" + event +"ed__"] = true;
+        break;
     }
-    for (var i = el.attributes.length - 1; i >= 0; i--) {
-      name = el.attributes[i].name.toLowerCase();
-      if (name in bindToAttribute) {
-        fns.push(bindToAttribute[name]);
-      }
-    }
-    fns.forEach(function (f) {
-      f(el);
-    });
+
   }
 
   function hijinksResponse(text) {
@@ -81,7 +106,8 @@
         }
         if (old) {
           (old.parentElement || old.parentNode).replaceChild(child, old);
-          mountElement(child);
+          bindElement(MOUNT, child);
+          bindElement(UNMOUNT, child);
         }
       }
     }
@@ -263,8 +289,15 @@
       }
     }
 
+    function _curry(fn, event) {
+      return function (arg) {
+        return fn(event, arg);
+      }
+    }
+
     Hijinks.prototype = {
-      mount: mountElement,
+      mount: _curry(bindElement, MOUNT),
+      mountChildren: _curry(bindElementChildren, MOUNT),
       push: function (name, bind) {
         if (_ATTRIBUTE_NAME.test(name)) {
           name = name.match(_ATTRIBUTE_NAME)[1];
@@ -306,7 +339,7 @@
     function initialize() {
       if (inited) return;
       inited = true;
-      mountElement(document.body.parentNode);
+      bindElement(MOUNT, document.body.parentNode);
     }
 
     if (document.readyState === 'complete') {
