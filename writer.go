@@ -6,8 +6,17 @@ import (
 	"log"
 	"net/http"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
+
+var (
+	groupName *regexp.Regexp
+)
+
+func init() {
+	groupName = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9-_]*$`)
+}
 
 type hjResponseWriter struct {
 	http.ResponseWriter
@@ -59,6 +68,9 @@ func (w *hjResponseWriter) executeTemplate(data interface{}) {
 			prep := ""
 			if prepend {
 				prep = " prepend"
+			}
+			if ok := groupName.MatchString(name); !ok {
+				log.Fatalf("Invalid hijinks group name: '%s'", name)
 			}
 			return template.HTML(fmt.Sprintf("<!-- hijinks-group: %s%s -->", name, prep))
 		},
