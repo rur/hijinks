@@ -10,3 +10,9 @@ base:
 list:
     extends: base > content > list
     file: list.templ.html
+    children:
+        - name: item
+
+list-item:
+    extends: list > item
+    file: item.templ.html
