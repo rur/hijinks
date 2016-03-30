@@ -13,4 +13,3 @@ global.window = document.defaultView;
 
 // Allow for things like window.location
 global.navigator = window.navigator;
-
