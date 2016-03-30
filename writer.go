@@ -23,6 +23,7 @@ type hjResponseWriter struct {
 	template   *Template
 	data       interface{}
 	dataCalled bool
+	partial    bool
 }
 
 func (w *hjResponseWriter) Data(d interface{}) {
@@ -81,6 +82,9 @@ func (w *hjResponseWriter) executeTemplate(data interface{}) {
 		log.Fatal("Error parsing files: ", err)
 	}
 
+	if w.partial {
+		w.Header().Set("X-Hijinks", "partial")
+	}
 	if err := t.ExecuteTemplate(w, filepath.Base(files[0]), data); err != nil {
 		log.Fatal(err)
 	}

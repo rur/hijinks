@@ -313,31 +313,35 @@
     try {
       _url = url.toString();
     } catch (e) {
-      return ""
-    };
+      return "";
+    }
     var i = _url.indexOf("#"),
         hash = i > -1 ? _url.slice(i + 1) : "",
         j = _url.indexOf("?"),
         query = j > -1 ? _url.slice(j + 1, (i > -1 ? i : void 0)) : "",
         path = _url.slice(0, (j > -1 ? j : void 0));
-    if (/(^|&)hijinks(&|$)/.test(query)) {
+    if (/(^|&)hijinks(=|&|$)/.test(query)) {
       return _url;
     }
     _url = path + "?" + (query ? query + "&" : "") +
       "hijinks" +
       (hash ? "#" + hash : "");
     return _url;
-    f
   }
 
   function getHijinksPartial(url) {
     var req = (window.XMLHttpRequest) ? new XMLHttpRequest() : new ActiveXObject("MSXML2.XMLHTTP");
 
     req.onreadystatechange = function() {
-      if (req.readyState === 4 && req.status < 300) {
-        hijinksResponse(req.responseText);
+      if (req.readyState === 4) {
+        if (req.getResponseHeader("X-Hijinks") !== "partial") {
+          // it isn't a partial response, redirect
+          window.location.href = url;
+        } else if (req.status < 300){
+          hijinksResponse(req.responseText);
+        }
       }
-    }
+    };
     req.open("GET", addHijinksQuery(url));
     req.setRequestHeader("X-Hijinks", "partial", false);
     req.send();

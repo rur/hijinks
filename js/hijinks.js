@@ -10,13 +10,38 @@ window.hijinks = (function (util, init) {
      * @param  {string} url    The url
      */
     function request(method, url, data, encoding) {
+        if (util.METHODS.indexOf(method.toUpperCase()) === -1) {
+            throw new Error("Hijinks: Unknown request method '" + method + "'");
+        }
         var req = (XMLHttpRequest) ? new XMLHttpRequest() : new ActiveXObject("MSXML2.XMLHTTP");
         req.open(method.toUpperCase(), util.hijinksURL(url));
         req.setRequestHeader("X-Hijinks", "partial", false);
         if (data) {
             req.setRequestHeader('Content-Type', encoding || 'application/x-www-form-urlencoded');
         }
-        req.send(data);
+        req.onload = ajaxSuccess;
+        req.send(data || null);
+    }
+
+    /**
+     * XHR onload handler
+     *
+     * @private
+     */
+    function ajaxSuccess() {
+        if (this.getResponseHeader("X-Hijinks") !== "partial") {
+            util.browserNavigate(this.responseURL);
+        }
+        var i, len, temp, child, old;
+        temp = document.createElement("div");
+        temp.innerHTML = this.responseText;
+        for (i = 0, len = temp.children.length; i < len; i++) {
+            child = temp.children[i];
+            old = document.getElementById(child.id);
+            if (old) {
+                old.parentNode.replaceChild(child, old);
+            }
+        }
     }
 
     // api
@@ -53,5 +78,14 @@ window.hijinks = (function (util, init) {
         "hijinks" +
         (hash ? "#" + hash : "");
       return _url;
-    }
+    },
+    /**
+     * Navigate to a url
+     *
+     * @param  {string} url The url to set as the location href
+     */
+    browserNavigate: function (url) {
+        window.location.href = url;
+    },
+    METHODS: ['POST','GET','PUT','PATCH','DELETE']
 }, window.hijinks));

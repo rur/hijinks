@@ -18,12 +18,13 @@ func (n *naiveImpl) Handler(path string) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		var templ *Template
-		if r.Header.Get("X-Hijinks") == "partial" {
+		loadPartial := r.Header.Get("X-Hijinks") == "partial"
+		if loadPartial {
 			templ = partial
 		} else {
 			templ = document
 		}
-		hw := hjResponseWriter{ResponseWriter: w, template: templ}
+		hw := hjResponseWriter{ResponseWriter: w, template: templ, partial: loadPartial}
 		model, ok := hw.loadData(r)
 		if ok {
 			hw.executeTemplate(model)

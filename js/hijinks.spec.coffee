@@ -59,3 +59,41 @@ describe 'hijinks.request', ->
 
     it 'should have a body', ->
       expect(req.requestBody).to.equal "a=123&b=987"
+
+  describe 'rejected request', ->
+    it 'should have a white list of methods', ->
+      expect -> window.hijinks.request("NOMETHOD")
+        .to.throw "Hijinks: Unknown request method 'NOMETHOD'"
+
+
+  describe 'replace indexed elements', ->
+    el = null
+    beforeEach ->
+      el = document.createElement("p")
+      el.setAttribute("id", "test")
+      el.textContent = "before!"
+      document.body.appendChild(el);
+
+    afterEach ->
+      document.body.removeChild(document.getElementById("test"))
+
+    it 'should have appended the child', ->
+      expect(el.parentNode.tagName).to.equal "BODY"
+
+    it 'should replace <p>before!</p> with <em>after!</em>', ->
+      window.hijinks.request("GET", "/test")
+      requests[0].respond(
+        200,
+        { 'Content-Type': 'text/html', 'X-Hijinks': 'partial' },
+        '<em id="test">after!</em>'
+      )
+      expect(document.body.textContent).to.equal "after!"
+
+    it 'should do nothing with an unmatched response', ->
+      window.hijinks.request("GET", "/test")
+      requests[0].respond(
+        200,
+        { 'Content-Type': 'text/html', 'X-Hijinks': 'partial' },
+        '<em id="test_other">after!</em>'
+      )
+      expect(document.body.textContent).to.equal "before!"
