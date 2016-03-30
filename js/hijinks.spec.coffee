@@ -36,3 +36,26 @@ describe 'hijinks.request', ->
 
     it 'should add the hijinks query param', ->
       expect(req.url).to.equal "/test?hijinks"
+
+    it 'should have no body', ->
+      expect(req.requestBody).to.be.null
+
+  describe 'issue basic POST request', ->
+    req = null
+    beforeEach ->
+      window.hijinks.request("POST", "/test", "a=123&b=987", "application/x-www-form-urlencoded")
+      req = requests[0]
+
+    it 'should have issued a request with right info', ->
+      expect(req).to.exist
+      expect(req.url).to.contain "/test"
+      expect(req.method).to.equal "POST"
+      expect(req.requestHeaders["X-Hijinks"]).to.equal "partial"
+      expect(req.url).to.equal "/test?hijinks"
+
+    it 'should have added the content type header', ->
+      expect req.requestHeaders["Content-Type"]
+        .to.contain  "application/x-www-form-urlencoded"
+
+    it 'should have a body', ->
+      expect(req.requestBody).to.equal "a=123&b=987"

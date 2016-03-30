@@ -9,11 +9,14 @@ window.hijinks = (function (util, init) {
      * @param  {string} method The request method GET|POST|...
      * @param  {string} url    The url
      */
-    function request(method, url) {
+    function request(method, url, data, encoding) {
         var req = (XMLHttpRequest) ? new XMLHttpRequest() : new ActiveXObject("MSXML2.XMLHTTP");
         req.open(method.toUpperCase(), util.hijinksURL(url));
         req.setRequestHeader("X-Hijinks", "partial", false);
-        req.send();
+        if (data) {
+            req.setRequestHeader('Content-Type', encoding || 'application/x-www-form-urlencoded');
+        }
+        req.send(data);
     }
 
     // api
@@ -25,7 +28,7 @@ window.hijinks = (function (util, init) {
     // Utils:
     //
     /**
-     * add 'hijinks' query parameter to a url
+     * add 'hijinks' query parameter to a url string
      *
      * @private
      * @param {string} url
