@@ -87,5 +87,9 @@ window.hijinks = (function (util, init) {
     browserNavigate: function (url) {
         window.location.href = url;
     },
+    /**
+     * White-list of request methods types
+     * @type {Array}
+     */
     METHODS: ['POST','GET','PUT','PATCH','DELETE']
 }, window.hijinks));
