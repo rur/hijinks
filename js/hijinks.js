@@ -1,6 +1,90 @@
 // hijinks clientside library implementation here
 
 window.hijinks = (function (util, init) {
+    var bindNodeName = {},
+        bindAttrName = {};
+
+    /**
+     * XHR onload handler
+     *
+     * This will convert the response HTML into nodes and
+     * figure out how to attached them to the DOM
+     *
+     * @private
+     */
+    function ajaxSuccess() {
+        if (this.getResponseHeader("X-Hijinks") !== "partial") {
+            return;
+        }
+        var i, len, temp, child, old, dup = [];
+        temp = document.createElement("div");
+        temp.innerHTML = this.responseText;
+        for (i = 0, len = temp.children.length; i < len; i++) {
+            dup[i] = temp.children[i];
+        }
+        for (i = 0, len = dup.length; i < len; i++) {
+            child = dup[i];
+            if (child.id) {
+                old = document.getElementById(child.id);
+                if (old) {
+                    old.parentNode.replaceChild(child, old);
+                    bindElement("unmount", old);
+                    bindElement("mount", child);
+                }
+            }
+        }
+    }
+
+    function bindElement(event, el) {
+        var i, name;
+        // TODO: do this with a stack
+        for (i = 0; i < el.children.length; i++) {
+            bindElement(event, el.children[i]);
+        }
+        name = el.tagName.toUpperCase();
+        if (bindNodeName.hasOwnProperty(name) && typeof bindNodeName[name][event] === 'function') {
+            bindNodeName[name][event](el);
+        }
+        for (i = el.attributes.length - 1; i >= 0; i--) {
+            name = el.attributes[i].name.toUpperCase();
+            if (bindAttrName.hasOwnProperty(name) && typeof bindAttrName[name][event] === 'function') {
+                bindAttrName[name][event](el);
+            }
+        }
+        el["__hijinks_" + event + "ed__"] = true;
+    }
+
+    /**
+     * Hijinks API Constructor
+     *
+     * @param {Array|Hijinks} setup GA style initialization
+     */
+    function Hijinks(setup) {
+        this._setup = setup instanceof Hijinks ? setup._setup : (
+            setup instanceof Array ? setup : []
+        );
+        for (var i = 0; i < this._setup.length; i++) {
+            this.push(this._setup[i]);
+        }
+    }
+
+    Hijinks.prototype.push = function (def) {
+        if (def.tagName) {
+            bindNodeName[def.tagName.toUpperCase()] = def;
+        }
+        if (def.attrName) {
+            bindAttrName[def.attrName.toUpperCase()] = def;
+        }
+    };
+
+    Hijinks.prototype.mount = function (el) {
+        bindElement("mount", el);
+    };
+
+    Hijinks.prototype.unmount = function (el) {
+        bindElement("unmount", el);
+    };
+
     /**
      * Send XHR request to Hijinks endpoint. The response is handled
      * internally, the response is handled internally.
@@ -9,7 +93,7 @@ window.hijinks = (function (util, init) {
      * @param  {string} method The request method GET|POST|...
      * @param  {string} url    The url
      */
-    function request(method, url, data, encoding) {
+    Hijinks.prototype.request = function (method, url, data, encoding) {
         if (util.METHODS.indexOf(method.toUpperCase()) === -1) {
             throw new Error("Hijinks: Unknown request method '" + method + "'");
         }
@@ -21,33 +105,10 @@ window.hijinks = (function (util, init) {
         }
         req.onload = ajaxSuccess;
         req.send(data || null);
-    }
-
-    /**
-     * XHR onload handler
-     *
-     * @private
-     */
-    function ajaxSuccess() {
-        if (this.getResponseHeader("X-Hijinks") !== "partial") {
-            util.browserNavigate(this.responseURL);
-        }
-        var i, len, temp, child, old;
-        temp = document.createElement("div");
-        temp.innerHTML = this.responseText;
-        for (i = 0, len = temp.children.length; i < len; i++) {
-            child = temp.children[i];
-            old = document.getElementById(child.id);
-            if (old) {
-                old.parentNode.replaceChild(child, old);
-            }
-        }
-    }
+    };
 
     // api
-    return {
-        request: request
-    };
+    return new Hijinks(init);
 }({
     //
     // Utils:

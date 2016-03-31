@@ -65,7 +65,6 @@ describe 'hijinks.request', ->
       expect -> window.hijinks.request("NOMETHOD")
         .to.throw "Hijinks: Unknown request method 'NOMETHOD'"
 
-
   describe 'replace indexed elements', ->
     el = null
     beforeEach ->
@@ -97,3 +96,86 @@ describe 'hijinks.request', ->
         '<em id="test_other">after!</em>'
       )
       expect(document.body.textContent).to.equal "before!"
+
+  describe 'mounting and unmounting elements', ->
+    beforeEach ->
+      this.el = document.createElement("DIV")
+      this.el.textContent = "Before!"
+      this.el.setAttribute("id", "test")
+      document.body.appendChild(this.el)
+      window.hijinks.mount(document.body)
+
+    afterEach ->
+      document.body.removeChild(document.getElementById("test"))
+
+    it 'should have mounted the body element', ->
+      expect(document.body.__hijinks_mounted__).to.true
+
+    it 'should have mounted the child element', ->
+      expect(this.el.__hijinks_mounted__).to.true
+
+    describe 'when elements are replaced', ->
+      beforeEach ->
+        window.hijinks.request("GET", "/test")
+        requests[0].respond(
+          200,
+          { 'Content-Type': 'text/html', 'X-Hijinks': 'partial' },
+          '<em id="test">after!</em>'
+        )
+        this.nue = document.getElementById('test')
+
+      it 'should remove the element from the DOM', ->
+        expect(this.el.parentNode).to.be.null
+
+      it 'should unmount the existing element', ->
+        expect(this.el.__hijinks_unmounted__).to.be.true
+
+      it 'should have inserted the new #test element', ->
+        expect(this.nue.tagName).to.equal "EM"
+
+      it 'should mount the new element', ->
+        expect(this.nue.__hijinks_mounted__).to.be.true
+
+  describe 'binding components', ->
+    beforeEach ->
+      this.el = document.createElement("test-node")
+      this.el.setAttribute("id", "test")
+      document.body.appendChild(this.el)
+      this.el2 = document.createElement("div")
+      this.el2.setAttribute("id", "test2")
+      this.el2.setAttribute("test-node", 123)
+      document.body.appendChild(this.el2)
+      # component definition:
+      this.component = {
+        tagName: "test-node",
+        attrName: "test-node",
+        mount: sinon.spy(),
+        unmount: sinon.spy()
+      }
+      window.hijinks.push(this.component)
+      window.hijinks.mount(document.body)
+
+    afterEach ->
+      document.body.removeChild(document.getElementById("test"))
+      document.body.removeChild(document.getElementById("test2"))
+
+    it 'should have called the mount on the element', ->
+      expect(this.component.mount.calledWith(this.el)).to.be.true
+
+    it 'should have called the mount on the attribute', ->
+      expect(this.component.mount.calledWith(this.el2)).to.be.true
+
+    describe 'when unmounted', ->
+      beforeEach ->
+        window.hijinks.request("GET", "/test")
+        requests[0].respond(
+          200,
+          { 'Content-Type': 'text/html', 'X-Hijinks': 'partial' },
+          '<div id="test">after!</div><div id="test2">after2!</div>'
+        )
+
+      it 'should have called the unmount on the element', ->
+        expect(this.component.unmount.calledWith(this.el)).to.be.true
+
+      it 'should have called the unmount on the attribute', ->
+        expect(this.component.unmount.calledWith(this.el2)).to.be.true
