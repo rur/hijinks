@@ -35,20 +35,27 @@ window.hijinks = (function (util, init) {
         }
     }
 
+    /**
+     * Trigger a component event handler on an element
+     *
+     * @param  {string}     event The event, mount or unmount
+     * @param  {DOMElement} el    The node to be bound
+     */
     function bindElement(event, el) {
         var i, name;
-        // TODO: do this with a stack
+        // TODO: do this with a stack not recursion
         for (i = 0; i < el.children.length; i++) {
             bindElement(event, el.children[i]);
         }
+        if (el["__hijinks_" + event + "ed__"]) return;
         name = el.tagName.toUpperCase();
         if (bindNodeName.hasOwnProperty(name) && typeof bindNodeName[name][event] === 'function') {
-            bindNodeName[name][event](el);
+            bindNodeName[name][event].call(bindNodeName[name], el);
         }
         for (i = el.attributes.length - 1; i >= 0; i--) {
             name = el.attributes[i].name.toUpperCase();
             if (bindAttrName.hasOwnProperty(name) && typeof bindAttrName[name][event] === 'function') {
-                bindAttrName[name][event](el);
+                bindAttrName[name][event].call(bindAttrName[name], el);
             }
         }
         el["__hijinks_" + event + "ed__"] = true;
@@ -68,6 +75,11 @@ window.hijinks = (function (util, init) {
         }
     }
 
+    /**
+     * Add a component definition
+     * @param  {Object} def Dict containing component
+     * @return {[type]}     [description]
+     */
     Hijinks.prototype.push = function (def) {
         if (def.tagName) {
             bindNodeName[def.tagName.toUpperCase()] = def;
