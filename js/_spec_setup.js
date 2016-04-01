@@ -3,7 +3,7 @@ sinon = require('sinon');
 
 // Define some html to be our basic document
 // JSDOM will consume this and act as if we were in a browser
-var DEFAULT_HTML = '<html><body></body></html>';
+var DEFAULT_HTML = '<html><head><title>Default Title</title></head><body></body></html>';
 
 // Define some variables to make it look like we're a browser
 // First, use JSDOM's fake DOM as the document

@@ -83,6 +83,12 @@ window.hijinks = (function ($, hijinks) {
     METHODS: ['POST','GET','PUT','PATCH','DELETE'],
 
     /**
+     * List of HTML element for which there can be only one
+     * @type {Array}
+     */
+    SINGLETONS: ['TITLE'],
+
+    /**
      * XHR onload handler
      *
      * This will convert the response HTML into nodes and
@@ -102,12 +108,22 @@ window.hijinks = (function ($, hijinks) {
         }
         for (i = 0, len = dup.length; i < len; i++) {
             child = dup[i];
+            if (this.SINGLETONS.indexOf(child.nodeName.toUpperCase()) > -1) {
+                old = document.getElementsByTagName(child.nodeName)[0];
+                if (old) {
+                    old.parentNode.replaceChild(child, old);
+                    this.unmount(old);
+                    this.mount(child);
+                    continue;
+                }
+            }
             if (child.id) {
                 old = document.getElementById(child.id);
                 if (old) {
                     old.parentNode.replaceChild(child, old);
                     this.unmount(old);
                     this.mount(child);
+                    continue;
                 }
             }
         }
@@ -229,6 +245,7 @@ window.hijinks = (function ($, hijinks) {
      * Cross browser shim for (request|cancel)AnimationFrame
      */
     animationFrame: (function() {
+        // see: https://gist.github.com/paulirish/1579671
         var requestAnimationFrame = window.requestAnimationFrame;
         var cancelAnimationFrame = window.cancelAnimationFrame;
         var lastTime = 0;

@@ -5,7 +5,7 @@ describe 'test hijinks library', ->
   it 'should have exported hijinks api to the window', ->
     expect(global.window.hijinks).to.exist
 
-describe 'hijinks.request', ->
+describe 'hijinks', ->
   requests = null
 
   beforeEach ->
@@ -98,6 +98,17 @@ describe 'hijinks.request', ->
         '<em id="test_other">after!</em>'
       )
       expect(document.body.textContent).to.equal "before!"
+
+  describe 'replace singleton elements', ->
+
+    it 'should replace title tag', ->
+      window.hijinks.request("GET", "/test")
+      requests[0].respond(
+        200,
+        { 'Content-Type': 'text/html', 'X-Hijinks': 'partial' },
+        '<title>New Title!</title>'
+      )
+      expect(document.title).to.equal "New Title!"
 
   describe 'mounting and unmounting elements', ->
     beforeEach ->
