@@ -1,78 +1,20 @@
 // hijinks clientside library implementation here
 
-window.hijinks = (function (util, init) {
-    var bindNodeName = {},
-        bindAttrName = {};
-
-    /**
-     * XHR onload handler
-     *
-     * This will convert the response HTML into nodes and
-     * figure out how to attached them to the DOM
-     *
-     * @private
-     */
-    function ajaxSuccess() {
-        if (this.getResponseHeader("X-Hijinks") !== "partial") {
-            return;
-        }
-        var i, len, temp, child, old, dup = [];
-        temp = document.createElement("div");
-        temp.innerHTML = this.responseText;
-        for (i = 0, len = temp.children.length; i < len; i++) {
-            dup[i] = temp.children[i];
-        }
-        for (i = 0, len = dup.length; i < len; i++) {
-            child = dup[i];
-            if (child.id) {
-                old = document.getElementById(child.id);
-                if (old) {
-                    old.parentNode.replaceChild(child, old);
-                    bindElement("unmount", old);
-                    bindElement("mount", child);
-                }
-            }
-        }
-    }
-
-    /**
-     * Trigger a component event handler on an element
-     *
-     * @param  {string}     event The event, mount or unmount
-     * @param  {DOMElement} el    The node to be bound
-     */
-    function bindElement(event, el) {
-        var i, name;
-        // TODO: do this with a stack not recursion
-        for (i = 0; i < el.children.length; i++) {
-            bindElement(event, el.children[i]);
-        }
-        if (el["__hijinks_" + event + "ed__"]) return;
-        name = el.tagName.toUpperCase();
-        if (bindNodeName.hasOwnProperty(name) && typeof bindNodeName[name][event] === 'function') {
-            bindNodeName[name][event].call(bindNodeName[name], el);
-        }
-        for (i = el.attributes.length - 1; i >= 0; i--) {
-            name = el.attributes[i].name.toUpperCase();
-            if (bindAttrName.hasOwnProperty(name) && typeof bindAttrName[name][event] === 'function') {
-                bindAttrName[name][event].call(bindAttrName[name], el);
-            }
-        }
-        el["__hijinks_" + event + "ed__"] = true;
-    }
-
+window.hijinks = (function ($, hijinks) {
     /**
      * Hijinks API Constructor
      *
+     * @constructor
      * @param {Array|Hijinks} setup GA style initialization
      */
     function Hijinks(setup) {
-        this._setup = setup instanceof Hijinks ? setup._setup : (
-            setup instanceof Array ? setup : []
-        );
-        for (var i = 0; i < this._setup.length; i++) {
-            this.push(this._setup[i]);
+        if (setup instanceof Hijinks) {
+            this._setup = setup._setup;
+        } else if (setup instanceof Array) {
+            this._setup = setup;
         }
+        this._setup = (this._setup || []).slice();
+        $.bindComponentsAsync(this._setup);
     }
 
     /**
@@ -81,20 +23,24 @@ window.hijinks = (function (util, init) {
      * @return {[type]}     [description]
      */
     Hijinks.prototype.push = function (def) {
-        if (def.tagName) {
-            bindNodeName[def.tagName.toUpperCase()] = def;
-        }
-        if (def.attrName) {
-            bindAttrName[def.attrName.toUpperCase()] = def;
-        }
+        this._setup.push(def);
+        $.bindComponentsAsync(this._setup);
     };
 
+    /**
+     * trigger mount event on a node and it's subtree
+     * @param  {HTMLElement} el
+     */
     Hijinks.prototype.mount = function (el) {
-        bindElement("mount", el);
+        $.mount(el);
     };
 
+    /**
+     * trigger mount event on a node and it's subtree
+     * @param  {HTMLElement} el
+     */
     Hijinks.prototype.unmount = function (el) {
-        bindElement("unmount", el);
+        $.unmount(el);
     };
 
     /**
@@ -106,29 +52,155 @@ window.hijinks = (function (util, init) {
      * @param  {string} url    The url
      */
     Hijinks.prototype.request = function (method, url, data, encoding) {
-        if (util.METHODS.indexOf(method.toUpperCase()) === -1) {
+        if ($.METHODS.indexOf(method.toUpperCase()) === -1) {
             throw new Error("Hijinks: Unknown request method '" + method + "'");
         }
         var req = (XMLHttpRequest) ? new XMLHttpRequest() : new ActiveXObject("MSXML2.XMLHTTP");
-        req.open(method.toUpperCase(), util.hijinksURL(url));
+        req.open(method.toUpperCase(), $.hijinksURL(url));
         req.setRequestHeader("X-Hijinks", "partial", false);
         if (data) {
             req.setRequestHeader('Content-Type', encoding || 'application/x-www-form-urlencoded');
         }
-        req.onload = ajaxSuccess;
+        req.onload = function() {
+          $.ajaxSuccess(this);
+        };
         req.send(data || null);
     };
 
     // api
-    return new Hijinks(init);
+    return new Hijinks(hijinks);
 }({
     //
-    // Utils:
+    // Private
     //
+    bindNodeName: {},
+    bindAttrName: {},
+
+    /**
+     * White-list of request methods types
+     * @type {Array}
+     */
+    METHODS: ['POST','GET','PUT','PATCH','DELETE'],
+
+    /**
+     * XHR onload handler
+     *
+     * This will convert the response HTML into nodes and
+     * figure out how to attached them to the DOM
+     *
+     * @param {XMLHttpRequest} xhr The xhr instance used to make the request
+     */
+    ajaxSuccess: function (xhr) {
+        if (xhr.getResponseHeader("X-Hijinks") !== "partial") {
+            return;
+        }
+        var i, len, temp, child, old, dup = [];
+        temp = document.createElement("div");
+        temp.innerHTML = xhr.responseText;
+        for (i = 0, len = temp.children.length; i < len; i++) {
+            dup[i] = temp.children[i];
+        }
+        for (i = 0, len = dup.length; i < len; i++) {
+            child = dup[i];
+            if (child.id) {
+                old = document.getElementById(child.id);
+                if (old) {
+                    old.parentNode.replaceChild(child, old);
+                    this.unmount(old);
+                    this.mount(child);
+                }
+            }
+        }
+    },
+
+    /**
+     * Attach an external components to an element and its children depending
+     * on the node name or its attributes
+     *
+     * @param  {HTMLElement} el
+     */
+    mount: function (el) {
+        var i, name, comp;
+        // TODO: do this with a stack not recursion
+        for (i = 0; i < el.children.length; i++) {
+            this.mount(el.children[i]);
+        }
+        el._hijinksComponents = (el._hijinksComponents || []);
+        name = el.tagName.toUpperCase();
+        comp = this.bindNodeName.hasOwnProperty(name) ? this.bindNodeName[name] : null;
+        if (comp && el._hijinksComponents.indexOf(comp) === -1 && typeof comp.mount === "function") {
+            comp.mount(el);
+            el._hijinksComponents.push(comp);
+        }
+        for (i = el.attributes.length - 1; i >= 0; i--) {
+            name = el.attributes[i].name.toUpperCase();
+            comp = this.bindAttrName.hasOwnProperty(name) ? this.bindAttrName[name] : null;
+            if (comp && el._hijinksComponents.indexOf(comp) === -1 && typeof comp.mount === "function") {
+                comp.mount(el);
+                el._hijinksComponents.push(comp);
+            }
+        }
+    },
+
+    /**
+     * Trigger unmount handler on all Hijinks mounted components attached
+     * to a DOM Element
+     *
+     * @param  {HTMLElement} el
+     */
+    unmount: function (el) {
+        var i, comp;
+        // TODO: do this with a stack not recursion
+        for (i = 0; i < el.children.length; i++) {
+            this.unmount(el.children[i]);
+        }
+        if (el._hijinksComponents instanceof Array) {
+            for (i = el._hijinksComponents.length - 1; i >= 0; i--) {
+                comp = el._hijinksComponents[i];
+                if (comp && typeof comp.unmount === "function") {
+                    comp.unmount(el);
+                }
+            }
+            el._hijinksComponents = null;
+        }
+    },
+
+    /**
+     * index all component definitions and mount the full document
+     *
+     * @param  {Array} setup List of component definitions
+     */
+    bindComponents: function (setup) {
+        var def, i, len = setup.length;
+        this.bindNodeName = {};
+        this.bindAttrName = {};
+        for (i = 0; i < len; i++) {
+            def = setup[i];
+            if (def.tagName) {
+                this.bindNodeName[def.tagName.toUpperCase()] = def;
+            }
+            if (def.attrName) {
+                this.bindAttrName[def.attrName.toUpperCase()] = def;
+            }
+        }
+        this.mount(document.body);
+    },
+
+    /**
+     * index all component definitions some time before the next rendering frame
+     *
+     * @param  {Array} setup List of component definitions
+     */
+    bindComponentsAsync: function(setup) {
+        this.animationFrame.cancel(this._id);
+        this._id = this.animationFrame.request(this.bind(function () {
+            this.bindComponents(setup);
+        }, this));
+    },
+
     /**
      * add 'hijinks' query parameter to a url string
      *
-     * @private
      * @param {string} url
      * @return {string} the url with hijinks query parameter added
      */
@@ -152,6 +224,60 @@ window.hijinks = (function (util, init) {
         (hash ? "#" + hash : "");
       return _url;
     },
+
+    /**
+     * Cross browser shim for (request|cancel)AnimationFrame
+     */
+    animationFrame: (function() {
+        var requestAnimationFrame = window.requestAnimationFrame;
+        var cancelAnimationFrame = window.cancelAnimationFrame;
+        var lastTime = 0;
+        var vendors = ['ms', 'moz', 'webkit', 'o'];
+        for(var x = 0; x < vendors.length && !requestAnimationFrame; ++x) {
+            requestAnimationFrame = window[vendors[x]+'RequestAnimationFrame'];
+            cancelAnimationFrame = window[vendors[x]+'CancelAnimationFrame'] || window[vendors[x]+'CancelRequestAnimationFrame'];
+        }
+
+        if (!requestAnimationFrame)
+            requestAnimationFrame = function(callback, element) {
+                var currTime = new Date().getTime();
+                var timeToCall = Math.max(0, 16 - (currTime - lastTime));
+                var id = window.setTimeout(function() { callback(currTime + timeToCall); },
+                  timeToCall);
+                lastTime = currTime + timeToCall;
+                return id;
+            };
+
+        if (!cancelAnimationFrame)
+            cancelAnimationFrame = function(id) {
+                clearTimeout(id);
+            };
+
+        return {
+            request: requestAnimationFrame,
+            cancel: cancelAnimationFrame
+        };
+    }()),
+
+    /**
+     * LoFi bind method
+     *
+     * @param  {Function} fn        method to be bound
+     * @param  {Object}   self      thisArg
+     * @param  {*}        args...   variadic arguments
+     * @returns {Function} Bound function
+     */
+    bind: function (fn, self) {
+        var args = [].slice.call(arguments, 2);
+        if (typeof fn.bind === "function") {
+            return fn.bind.apply(fn, [self].concat(args));
+        }
+        return function() {
+            args = args.concat([].slice.call(arguments));
+            return fn.apply(self, args);
+        };
+    },
+
     /**
      * Navigate to a url
      *
@@ -159,10 +285,5 @@ window.hijinks = (function (util, init) {
      */
     browserNavigate: function (url) {
         window.location.href = url;
-    },
-    /**
-     * White-list of request methods types
-     * @type {Array}
-     */
-    METHODS: ['POST','GET','PUT','PATCH','DELETE']
+    }
 }, window.hijinks));

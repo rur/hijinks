@@ -1,4 +1,5 @@
 var jsdom = require('jsdom');
+sinon = require('sinon');
 
 // Define some html to be our basic document
 // JSDOM will consume this and act as if we were in a browser
@@ -10,6 +11,9 @@ global.document = jsdom.jsdom(DEFAULT_HTML);
 
 // Set up a mock window
 global.window = document.defaultView;
+
+global.window.requestAnimationFrame = sinon.spy();
+global.window.cancelAnimationFrame = sinon.spy();
 
 // Allow for things like window.location
 global.navigator = window.navigator;

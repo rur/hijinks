@@ -17,6 +17,8 @@ describe 'hijinks.request', ->
 
   afterEach ->
     this.xhr.restore()
+    window.requestAnimationFrame.reset()
+    window.cancelAnimationFrame.reset()
 
   describe 'issue basic GET request', ->
     req = null
@@ -109,10 +111,10 @@ describe 'hijinks.request', ->
       document.body.removeChild(document.getElementById("test"))
 
     it 'should have mounted the body element', ->
-      expect(document.body.__hijinks_mounted__).to.true
+      expect(document.body._hijinksComponents).to.eql []
 
     it 'should have mounted the child element', ->
-      expect(this.el.__hijinks_mounted__).to.true
+      expect(this.el._hijinksComponents).to.eql []
 
     describe 'when elements are replaced', ->
       beforeEach ->
@@ -128,13 +130,13 @@ describe 'hijinks.request', ->
         expect(this.el.parentNode).to.be.null
 
       it 'should unmount the existing element', ->
-        expect(this.el.__hijinks_unmounted__).to.be.true
+        expect(this.el._hijinksComponents).to.be.null
 
       it 'should have inserted the new #test element', ->
         expect(this.nue.tagName).to.equal "EM"
 
       it 'should mount the new element', ->
-        expect(this.nue.__hijinks_mounted__).to.be.true
+        expect(this.nue._hijinksComponents).to.eql []
 
   describe 'binding components', ->
     beforeEach ->
@@ -153,7 +155,7 @@ describe 'hijinks.request', ->
         unmount: sinon.spy()
       }
       window.hijinks.push(this.component)
-      window.hijinks.mount(document.body)
+      window.requestAnimationFrame.lastCall.args[0]()
 
     afterEach ->
       document.body.removeChild(document.getElementById("test"))
