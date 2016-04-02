@@ -98,17 +98,18 @@ window.hijinks = (function ($, settings) {
      */
     ajaxSuccess: function (xhr) {
         "use strict";
+        var i, len, j, temp, child, old, nodes, groups, groupName, group, gfrag;
         if (xhr.getResponseHeader("X-Hijinks") !== "partial") {
             return;
         }
-        var i, len, temp, child, old, dup = [], groups, groupName;
         temp = document.createElement("div");
         temp.innerHTML = xhr.responseText;
+        nodes = new Array(len);
         for (i = 0, len = temp.children.length; i < len; i++) {
-            dup[i] = temp.children[i];
+            nodes[i] = temp.children[i];
         }
-        for (i = 0, len = dup.length; i < len; i++) {
-            child = dup[i];
+        for (i = 0, len = nodes.length; i < len; i++) {
+            child = nodes[i];
             if (this.SINGLETONS.indexOf(child.nodeName.toUpperCase()) > -1) {
                 old = document.getElementsByTagName(child.nodeName)[0];
                 if (old) {
@@ -134,9 +135,9 @@ window.hijinks = (function ($, settings) {
                     group = groups.byName[groupName];
                     gfrag = document.createDocumentFragment();
                     groupitem_lookahead:
-                    for (j = i; j < dup.length; j++) {
+                    for (j = i; j < len; j++) {
                         // look ahead and consume all adjacent members of this group into a fragment
-                        child = dup[j];
+                        child = nodes[j];
                         if (child && child.getAttribute("data-hijinks-group") === groupName) {
                           // group members with a matched id will be inserted to the DOM before the
                           // fragment is added to the end of the group
@@ -259,8 +260,8 @@ window.hijinks = (function ($, settings) {
      * @param  {Object} group The group definition taken from the HijinksGroupIndex
      */
     insertToGroup: function (el, group) {
-        var parent = group && (group.element.parentElement || group.element.parentNode),
-            last = group.element, toMount, len, i;
+        var toMount, len, i;
+        var parent = group && (group.element.parentElement || group.element.parentNode);
         if (!parent) return;
         if (el instanceof window.DocumentFragment) {
             len = el.children.length;
@@ -273,6 +274,7 @@ window.hijinks = (function ($, settings) {
             toMount = [el];
         }
 
+        var last = group.element;
         if (group.prepend) {
             while (last.previousSibling &&
                 (last.previousSibling.nodeType != Node.ELEMENT_NODE ||
