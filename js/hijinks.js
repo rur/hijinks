@@ -249,6 +249,13 @@ window.hijinks = (function ($, settings) {
         }, this));
     },
 
+    /**
+     * take an element or document fragment and inserts into the tail end of
+     * the supplied group
+     *
+     * @param  {HTMLElement|DocumentFragment} el
+     * @param  {Object} group The group definition taken from the HijinksGroupIndex
+     */
     insertToGroup: function (el, group) {
         var parent = group && (group.element.parentElement || group.element.parentNode),
                 last = group.element;

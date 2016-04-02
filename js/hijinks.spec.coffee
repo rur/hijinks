@@ -194,19 +194,19 @@ describe 'Hijinks', ->
       lists = document.createDocumentFragment();
       this.c1 = document.createComment("hijinks-group: test")
       this.list = document.createElement("UL")
-      this.list.setAttribute("id", "test")
+      this.list.setAttribute("id", "list")
       this.list.appendChild(this.c1)
       lists.appendChild(this.list)
       this.c2 = document.createComment("hijinks-group: test2 prepend")
       this.list2 = document.createElement("UL")
-      this.list2.setAttribute("id", "test2")
+      this.list2.setAttribute("id", "list2")
       this.list2.appendChild(this.c2)
       lists.appendChild(this.list2)
       document.body.appendChild(lists)
 
     afterEach ->
-      document.body.removeChild(document.getElementById("test"))
-      document.body.removeChild(document.getElementById("test2"))
+      document.body.removeChild(document.getElementById("list"))
+      document.body.removeChild(document.getElementById("list2"))
 
     it 'should have created commoent element', ->
       expect(this.list.childNodes[0].nodeValue).to.equal "hijinks-group: test"
@@ -222,3 +222,22 @@ describe 'Hijinks', ->
         '<li data-hijinks-group="test">my first element!</li>'
       )
       expect(this.list.textContent).to.equal "my first element!"
+      expect([].map.call(this.list.childNodes, (n) -> n.textContent))
+        .to.eql [
+          "hijinks-group: test"
+          "my first element!"
+        ]
+
+    it 'should insert two elements above list2 in the correct order', ->
+      window.hijinks.request("GET", "/test")
+      requests[0].respond(
+        200,
+        { 'Content-Type': 'text/html', 'X-Hijinks': 'partial' },
+        '<li data-hijinks-group="test2">my first element!</li><li data-hijinks-group="test2">my second element!</li>'
+      )
+      expect([].map.call(this.list2.childNodes, (n) -> n.textContent))
+        .to.eql [
+          "my first element!",
+          "my second element!",
+          "hijinks-group: test2 prepend",
+        ]
