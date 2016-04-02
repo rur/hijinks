@@ -1,13 +1,15 @@
-expect = require('chai').expect
+chai = require('chai')
+expect = chai.expect
 sinon = require('sinon')
 
 describe 'Hijinks', ->
-  requests = null
+  hijinks = requests = null
 
   beforeEach ->
     this.xhr = sinon.useFakeXMLHttpRequest();
     global.XMLHttpRequest = this.xhr
     requests = []
+    hijinks = window.hijinks
     this.xhr.onCreate = (req) ->
       requests.push(req)
 
@@ -19,7 +21,7 @@ describe 'Hijinks', ->
   describe 'issue basic GET request', ->
     req = null
     beforeEach ->
-      window.hijinks.request("GET", "/test")
+      hijinks.request("GET", "/test")
       req = requests[0]
 
     it 'should have issued a request', ->
@@ -41,7 +43,7 @@ describe 'Hijinks', ->
   describe 'issue basic POST request', ->
     req = null
     beforeEach ->
-      window.hijinks.request("POST", "/test", "a=123&b=987", "application/x-www-form-urlencoded")
+      hijinks.request("POST", "/test", "a=123&b=987", "application/x-www-form-urlencoded")
       req = requests[0]
 
     it 'should have issued a request with right info', ->
@@ -60,7 +62,7 @@ describe 'Hijinks', ->
 
   describe 'rejected request', ->
     it 'should have a white list of methods', ->
-      expect -> window.hijinks.request("NOMETHOD")
+      expect -> hijinks.request("NOMETHOD")
         .to.throw "Hijinks: Unknown request method 'NOMETHOD'"
 
   describe 'replace indexed elements', ->
@@ -78,7 +80,7 @@ describe 'Hijinks', ->
       expect(el.parentNode.tagName).to.equal "BODY"
 
     it 'should replace <p>before!</p> with <em>after!</em>', ->
-      window.hijinks.request("GET", "/test")
+      hijinks.request("GET", "/test")
       requests[0].respond(
         200,
         { 'Content-Type': 'text/html', 'X-Hijinks': 'partial' },
@@ -87,7 +89,7 @@ describe 'Hijinks', ->
       expect(document.body.textContent).to.equal "after!"
 
     it 'should do nothing with an unmatched response', ->
-      window.hijinks.request("GET", "/test")
+      hijinks.request("GET", "/test")
       requests[0].respond(
         200,
         { 'Content-Type': 'text/html', 'X-Hijinks': 'partial' },
@@ -98,7 +100,7 @@ describe 'Hijinks', ->
   describe 'replace singleton elements', ->
 
     it 'should replace title tag', ->
-      window.hijinks.request("GET", "/test")
+      hijinks.request("GET", "/test")
       requests[0].respond(
         200,
         { 'Content-Type': 'text/html', 'X-Hijinks': 'partial' },
@@ -112,7 +114,7 @@ describe 'Hijinks', ->
       this.el.textContent = "Before!"
       this.el.setAttribute("id", "test")
       document.body.appendChild(this.el)
-      window.hijinks.mount(document.body)
+      hijinks.mount(document.body)
 
     afterEach ->
       document.body.removeChild(document.getElementById("test"))
@@ -125,7 +127,7 @@ describe 'Hijinks', ->
 
     describe 'when elements are replaced', ->
       beforeEach ->
-        window.hijinks.request("GET", "/test")
+        hijinks.request("GET", "/test")
         requests[0].respond(
           200,
           { 'Content-Type': 'text/html', 'X-Hijinks': 'partial' },
@@ -161,7 +163,7 @@ describe 'Hijinks', ->
         mount: sinon.spy(),
         unmount: sinon.spy()
       }
-      window.hijinks.push(this.component)
+      hijinks.push(this.component)
       window.requestAnimationFrame.lastCall.args[0]()
 
     afterEach ->
@@ -176,7 +178,7 @@ describe 'Hijinks', ->
 
     describe 'when unmounted', ->
       beforeEach ->
-        window.hijinks.request("GET", "/test")
+        hijinks.request("GET", "/test")
         requests[0].respond(
           200,
           { 'Content-Type': 'text/html', 'X-Hijinks': 'partial' },
@@ -215,7 +217,8 @@ describe 'Hijinks', ->
       expect(this.list2.childNodes[0].nodeValue).to.equal "hijinks-group: test2 prepend"
 
     it 'should insert an element below the first list comment', ->
-      window.hijinks.request("GET", "/test")
+      hijinks
+      hijinks.request("GET", "/test")
       requests[0].respond(
         200,
         { 'Content-Type': 'text/html', 'X-Hijinks': 'partial' },
@@ -229,15 +232,26 @@ describe 'Hijinks', ->
         ]
 
     it 'should insert two elements above list2 in the correct order', ->
-      window.hijinks.request("GET", "/test")
+      mount = sinon.spy()
+      hijinks.push({
+        tagName: "LI",
+        mount: mount
+      })
+      window.requestAnimationFrame.lastCall.args[0]()
+      hijinks.request("GET", "/test")
       requests[0].respond(
         200,
         { 'Content-Type': 'text/html', 'X-Hijinks': 'partial' },
         '<li data-hijinks-group="test2">my first element!</li><li data-hijinks-group="test2">my second element!</li>'
       )
-      expect([].map.call(this.list2.childNodes, (n) -> n.textContent))
-        .to.eql [
-          "my first element!",
-          "my second element!",
-          "hijinks-group: test2 prepend",
-        ]
+      expect([].map.call(this.list2.childNodes, (n) -> n.textContent)).to.eql [
+        "my first element!",
+        "my second element!",
+        "hijinks-group: test2 prepend",
+      ]
+
+      for child in this.list2.children
+        unless mount.calledWith(child)
+          throw new chai.AssertionError("Expected " + child + " to have been mounted")
+
+

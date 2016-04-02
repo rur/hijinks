@@ -97,64 +97,66 @@ window.hijinks = (function ($, settings) {
      * @param {XMLHttpRequest} xhr The xhr instance used to make the request
      */
     ajaxSuccess: function (xhr) {
-      if (xhr.getResponseHeader("X-Hijinks") !== "partial") {
-          return;
-      }
-      var i, len, temp, child, old, dup = [], groups, groupName;
-      temp = document.createElement("div");
-      temp.innerHTML = xhr.responseText;
-      for (i = 0, len = temp.children.length; i < len; i++) {
-          dup[i] = temp.children[i];
-      }
-      for (i = 0, len = dup.length; i < len; i++) {
-        child = dup[i];
-        if (this.SINGLETONS.indexOf(child.nodeName.toUpperCase()) > -1) {
-            old = document.getElementsByTagName(child.nodeName)[0];
-            if (old) {
-                old.parentNode.replaceChild(child, old);
-                this.unmount(old);
-                this.mount(child);
-                continue;
-            }
+        "use strict";
+        if (xhr.getResponseHeader("X-Hijinks") !== "partial") {
+            return;
         }
-        if (child.id) {
-            old = document.getElementById(child.id);
-            if (old) {
-                old.parentNode.replaceChild(child, old);
-                this.unmount(old);
-                this.mount(child);
-                continue;
-            }
+        var i, len, temp, child, old, dup = [], groups, groupName;
+        temp = document.createElement("div");
+        temp.innerHTML = xhr.responseText;
+        for (i = 0, len = temp.children.length; i < len; i++) {
+            dup[i] = temp.children[i];
         }
-        if (child.hasAttribute("data-hijinks-group")) {
-            groups = groups || new this.HijinksGroupIndex(document.body);
-            groupName = child.getAttribute("data-hijinks-group");
-            if (groups.byName.hasOwnProperty(groupName)) {
-                group = groups.byName[groupName];
-                gfrag = document.createDocumentFragment();
-                for (j = i; j < dup.length; j++) {
-                    // look ahead and consume all adjacent members of this group into a fragment
-                    child = dup[j];
-                    if (child && child.getAttribute("data-hijinks-group") === groupName) {
-                      // group members with a matched id will be inserted to the DOM before the
-                      // fragment is added to the end of the group
-                      old = document.getElementById(child.id);
-                      if (old) {
-                        old.parentNode.replaceElement(child, old);
-                        this.unmount(old);
-                        this.mount(child);
-                      } else {
-                        gfrag.appendChild(child);
-                      }
-                      // an element has been consumed, bump the outer loop index
-                      i = j;
-                    } else {
-                      break;
-                    }
+        for (i = 0, len = dup.length; i < len; i++) {
+            child = dup[i];
+            if (this.SINGLETONS.indexOf(child.nodeName.toUpperCase()) > -1) {
+                old = document.getElementsByTagName(child.nodeName)[0];
+                if (old) {
+                    old.parentNode.replaceChild(child, old);
+                    this.unmount(old);
+                    this.mount(child);
+                    continue;
                 }
-                // take aggregated group and add elements to the list
-                this.insertToGroup(gfrag, group);
-                continue;
+            }
+            if (child.id) {
+                old = document.getElementById(child.id);
+                if (old) {
+                    old.parentNode.replaceChild(child, old);
+                    this.unmount(old);
+                    this.mount(child);
+                    continue;
+                }
+            }
+            if (child.hasAttribute("data-hijinks-group")) {
+                groups = groups || new this.HijinksGroupIndex(document.body);
+                groupName = child.getAttribute("data-hijinks-group");
+                if (groups.byName.hasOwnProperty(groupName)) {
+                    group = groups.byName[groupName];
+                    gfrag = document.createDocumentFragment();
+                    groupitem_lookahead:
+                    for (j = i; j < dup.length; j++) {
+                        // look ahead and consume all adjacent members of this group into a fragment
+                        child = dup[j];
+                        if (child && child.getAttribute("data-hijinks-group") === groupName) {
+                          // group members with a matched id will be inserted to the DOM before the
+                          // fragment is added to the end of the group
+                          old = document.getElementById(child.id);
+                          if (old) {
+                            old.parentNode.replaceElement(child, old);
+                            this.unmount(old);
+                            this.mount(child);
+                          } else {
+                            gfrag.appendChild(child);
+                          }
+                          // an element has been consumed, bump the outer loop index
+                          i = j;
+                        } else {
+                          break groupitem_lookahead;
+                        }
+                    }
+                    // take aggregated group and add elements to the list
+                    this.insertToGroup(gfrag, group);
+                    continue;
                 }
             }
         }
@@ -258,8 +260,18 @@ window.hijinks = (function ($, settings) {
      */
     insertToGroup: function (el, group) {
         var parent = group && (group.element.parentElement || group.element.parentNode),
-                last = group.element;
+            last = group.element, toMount, len, i;
         if (!parent) return;
+        if (el instanceof window.DocumentFragment) {
+            len = el.children.length;
+            toMount = Array(len);
+            for (i = 0; i < len; i++) {
+                toMount[i] = el.children[i];
+            }
+        } else {
+            len = 1;
+            toMount = [el];
+        }
 
         if (group.prepend) {
             while (last.previousSibling &&
@@ -278,7 +290,9 @@ window.hijinks = (function ($, settings) {
             }
             parent.insertBefore(el, last.nextSubling);
         }
-        this.mount(el);
+        for (i = 0; i < len; i++) {
+            this.mount(toMount[i]);
+        }
     },
 
     /**
