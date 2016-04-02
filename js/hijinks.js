@@ -1,6 +1,6 @@
 // hijinks clientside library implementation here
 
-window.hijinks = (function ($, hijinks) {
+window.hijinks = (function ($, settings) {
     /**
      * Hijinks API Constructor
      *
@@ -68,7 +68,7 @@ window.hijinks = (function ($, hijinks) {
     };
 
     // api
-    return new Hijinks(hijinks);
+    return new Hijinks(settings);
 }({
     //
     // Private
@@ -97,33 +97,64 @@ window.hijinks = (function ($, hijinks) {
      * @param {XMLHttpRequest} xhr The xhr instance used to make the request
      */
     ajaxSuccess: function (xhr) {
-        if (xhr.getResponseHeader("X-Hijinks") !== "partial") {
-            return;
-        }
-        var i, len, temp, child, old, dup = [];
-        temp = document.createElement("div");
-        temp.innerHTML = xhr.responseText;
-        for (i = 0, len = temp.children.length; i < len; i++) {
-            dup[i] = temp.children[i];
-        }
-        for (i = 0, len = dup.length; i < len; i++) {
-            child = dup[i];
-            if (this.SINGLETONS.indexOf(child.nodeName.toUpperCase()) > -1) {
-                old = document.getElementsByTagName(child.nodeName)[0];
-                if (old) {
-                    old.parentNode.replaceChild(child, old);
-                    this.unmount(old);
-                    this.mount(child);
-                    continue;
-                }
+      if (xhr.getResponseHeader("X-Hijinks") !== "partial") {
+          return;
+      }
+      var i, len, temp, child, old, dup = [], groups, groupName;
+      temp = document.createElement("div");
+      temp.innerHTML = xhr.responseText;
+      for (i = 0, len = temp.children.length; i < len; i++) {
+          dup[i] = temp.children[i];
+      }
+      for (i = 0, len = dup.length; i < len; i++) {
+        child = dup[i];
+        if (this.SINGLETONS.indexOf(child.nodeName.toUpperCase()) > -1) {
+            old = document.getElementsByTagName(child.nodeName)[0];
+            if (old) {
+                old.parentNode.replaceChild(child, old);
+                this.unmount(old);
+                this.mount(child);
+                continue;
             }
-            if (child.id) {
-                old = document.getElementById(child.id);
-                if (old) {
-                    old.parentNode.replaceChild(child, old);
-                    this.unmount(old);
-                    this.mount(child);
-                    continue;
+        }
+        if (child.id) {
+            old = document.getElementById(child.id);
+            if (old) {
+                old.parentNode.replaceChild(child, old);
+                this.unmount(old);
+                this.mount(child);
+                continue;
+            }
+        }
+        if (child.hasAttribute("data-hijinks-group")) {
+            groups = groups || new this.HijinksGroupIndex(document.body);
+            groupName = child.getAttribute("data-hijinks-group");
+            if (groups.byName.hasOwnProperty(groupName)) {
+                group = groups.byName[groupName];
+                gfrag = document.createDocumentFragment();
+                for (j = i; j < dup.length; j++) {
+                    // look ahead and consume all adjacent members of this group into a fragment
+                    child = dup[j];
+                    if (child && child.getAttribute("data-hijinks-group") === groupName) {
+                      // group members with a matched id will be inserted to the DOM before the
+                      // fragment is added to the end of the group
+                      old = document.getElementById(child.id);
+                      if (old) {
+                        old.parentNode.replaceElement(child, old);
+                        this.unmount(old);
+                        this.mount(child);
+                      } else {
+                        gfrag.appendChild(child);
+                      }
+                      // an element has been consumed, bump the outer loop index
+                      i = j;
+                    } else {
+                      break;
+                    }
+                }
+                // take aggregated group and add elements to the list
+                this.insertToGroup(gfrag, group);
+                continue;
                 }
             }
         }
@@ -136,20 +167,24 @@ window.hijinks = (function ($, hijinks) {
      * @param  {HTMLElement} el
      */
     mount: function (el) {
-        var i, name, comp;
+        var i, name, comp, attr;
+        if (el.nodeType !== 1 && el.nodeType !== 10) {
+            return;
+        }
         // TODO: do this with a stack not recursion
         for (i = 0; i < el.children.length; i++) {
             this.mount(el.children[i]);
         }
         el._hijinksComponents = (el._hijinksComponents || []);
-        name = el.tagName.toUpperCase();
+        name = (el.tagName || "").toUpperCase();
         comp = this.bindNodeName.hasOwnProperty(name) ? this.bindNodeName[name] : null;
         if (comp && el._hijinksComponents.indexOf(comp) === -1 && typeof comp.mount === "function") {
             comp.mount(el);
             el._hijinksComponents.push(comp);
         }
         for (i = el.attributes.length - 1; i >= 0; i--) {
-            name = el.attributes[i].name.toUpperCase();
+            attr = el.attributes[i];
+            name = (attr.name || "").toUpperCase();
             comp = this.bindAttrName.hasOwnProperty(name) ? this.bindAttrName[name] : null;
             if (comp && el._hijinksComponents.indexOf(comp) === -1 && typeof comp.mount === "function") {
                 comp.mount(el);
@@ -212,6 +247,31 @@ window.hijinks = (function ($, hijinks) {
         this._id = this.animationFrame.request(this.bind(function () {
             this.bindComponents(setup);
         }, this));
+    },
+
+    insertToGroup: function (el, group) {
+        var parent = group && (group.element.parentElement || group.element.parentNode),
+                last = group.element;
+        if (!parent) return;
+
+        if (group.prepend) {
+            while (last.previousSibling &&
+                (last.previousSibling.nodeType != Node.ELEMENT_NODE ||
+                    (last.previousSibling.hasAttribute("data-hijinks-group") &&
+                        last.previousSibling.getAttribute("data-hijinks-group") === group.name))) {
+                last = last.previousSibling;
+            }
+            parent.insertBefore(el, last);
+        } else {
+            while (last.nextSubling &&
+                (last.nextSubling.nodeType != Node.ELEMENT_NODE ||
+                    (last.nextSubling.hasAttribute("data-hijinks-group") &&
+                        last.nextSubling.getAttribute("data-hijinks-group") === group.name))) {
+                last = last.nextSubling;
+            }
+            parent.insertBefore(el, last.nextSubling);
+        }
+        this.mount(el);
     },
 
     /**
@@ -302,5 +362,42 @@ window.hijinks = (function ($, hijinks) {
      */
     browserNavigate: function (url) {
         window.location.href = url;
-    }
+    },
+
+    /**
+     * class used the search for hijinks group comment elements
+     *
+     * @constructor
+     *
+     */
+    HijinksGroupIndex: (function () {
+        var HJ_GROUP_REG = /^\s*hijinks-group: ([a-zA-Z][\w-\d]*)( prepend)?\s*$/;
+
+        function HijinksGroupIndex(context) {
+            // scan DOM from group comment nodes
+            // stack search adapted from http://stackoverflow.com/a/25388984/81962
+            this.byName = {};
+            var conf, el, i, node,
+                    elementPath = [context];
+            while (elementPath.length > 0) {
+                el = elementPath.pop();
+                for (i = 0; i < el.childNodes.length; i++) {
+                    node = el.childNodes[i];
+                    if (node.nodeType === 8) {
+                        conf = node.nodeValue.match(HJ_GROUP_REG);
+                        if (conf) {
+                            this.byName[conf[1]] = {
+                                name: conf[1],
+                                element: node,
+                                prepend: conf[2] === " prepend"
+                            };
+                        }
+                    } else {
+                        elementPath.push(node);
+                    }
+                }
+            }
+        }
+        return HijinksGroupIndex;
+      }())
 }, window.hijinks));

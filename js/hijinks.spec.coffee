@@ -1,11 +1,7 @@
 expect = require('chai').expect
 sinon = require('sinon')
 
-describe 'test hijinks library', ->
-  it 'should have exported hijinks api to the window', ->
-    expect(global.window.hijinks).to.exist
-
-describe 'hijinks', ->
+describe 'Hijinks', ->
   requests = null
 
   beforeEach ->
@@ -191,4 +187,38 @@ describe 'hijinks', ->
         expect(this.component.unmount.calledWith(this.el)).to.be.true
 
       it 'should have called the unmount on the attribute', ->
-        expect(this.component.unmount.calledWith(this.el2)).to.be.true
+        expect(this.component.unmount.calledWith(this.el2)).to.be.tru
+
+  describe 'inserting groups', ->
+    beforeEach ->
+      lists = document.createDocumentFragment();
+      this.c1 = document.createComment("hijinks-group: test")
+      this.list = document.createElement("UL")
+      this.list.setAttribute("id", "test")
+      this.list.appendChild(this.c1)
+      lists.appendChild(this.list)
+      this.c2 = document.createComment("hijinks-group: test2 prepend")
+      this.list2 = document.createElement("UL")
+      this.list2.setAttribute("id", "test2")
+      this.list2.appendChild(this.c2)
+      lists.appendChild(this.list2)
+      document.body.appendChild(lists)
+
+    afterEach ->
+      document.body.removeChild(document.getElementById("test"))
+      document.body.removeChild(document.getElementById("test2"))
+
+    it 'should have created commoent element', ->
+      expect(this.list.childNodes[0].nodeValue).to.equal "hijinks-group: test"
+
+    it 'should have created prepend comment element', ->
+      expect(this.list2.childNodes[0].nodeValue).to.equal "hijinks-group: test2 prepend"
+
+    it 'should insert an element below the first list comment', ->
+      window.hijinks.request("GET", "/test")
+      requests[0].respond(
+        200,
+        { 'Content-Type': 'text/html', 'X-Hijinks': 'partial' },
+        '<li data-hijinks-group="test">my first element!</li>'
+      )
+      expect(this.list.textContent).to.equal "my first element!"
