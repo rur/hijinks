@@ -243,8 +243,8 @@ window.hijinks = (function ($, settings) {
      * @param  {Array} setup List of component definitions
      */
     bindComponentsAsync: function(setup) {
-        this.animationFrame.cancel(this._id);
-        this._id = this.animationFrame.request(this.bind(function () {
+        this.cancelAnimationFrame(this._id);
+        this._id = this.requestAnimationFrame(this.bind(function () {
             this.bindComponents(setup);
         }, this));
     },
@@ -302,20 +302,17 @@ window.hijinks = (function ($, settings) {
     },
 
     /**
-     * Cross browser shim for (request|cancel)AnimationFrame
+     * x-browser requestAnimationFrame shim
      */
-    animationFrame: (function() {
-        // see: https://gist.github.com/paulirish/1579671
+    requestAnimationFrame: (function() {
         var requestAnimationFrame = window.requestAnimationFrame;
-        var cancelAnimationFrame = window.cancelAnimationFrame;
         var lastTime = 0;
         var vendors = ['ms', 'moz', 'webkit', 'o'];
-        for(var x = 0; x < vendors.length && !requestAnimationFrame; ++x) {
-            requestAnimationFrame = window[vendors[x]+'RequestAnimationFrame'];
-            cancelAnimationFrame = window[vendors[x]+'CancelAnimationFrame'] || window[vendors[x]+'CancelRequestAnimationFrame'];
+        for(var i = 0; i < vendors.length && !requestAnimationFrame; ++i) {
+            requestAnimationFrame = window[vendors[i]+'RequestAnimationFrame'];
         }
 
-        if (!requestAnimationFrame)
+        if (!requestAnimationFrame) {
             requestAnimationFrame = function(callback, element) {
                 var currTime = new Date().getTime();
                 var timeToCall = Math.max(0, 16 - (currTime - lastTime));
@@ -324,15 +321,33 @@ window.hijinks = (function ($, settings) {
                 lastTime = currTime + timeToCall;
                 return id;
             };
+        }
 
-        if (!cancelAnimationFrame)
+        return function (cb) {
+            // must be bound to window object
+            return requestAnimationFrame.call(window, cb);
+        };
+    }()),
+
+    /**
+     * x-browser cancelAnimationFrame shim
+     */
+    cancelAnimationFrame: (function () {
+        var cancelAnimationFrame = window.cancelAnimationFrame;
+        var vendors = ['ms', 'moz', 'webkit', 'o'];
+        for(var i = 0; i < vendors.length && !cancelAnimationFrame; ++i) {
+            cancelAnimationFrame = window[vendors[i]+'CancelAnimationFrame'] || window[vendors[i]+'CancelRequestAnimationFrame'];
+        }
+
+        if (!cancelAnimationFrame) {
             cancelAnimationFrame = function(id) {
                 clearTimeout(id);
             };
+        }
 
-        return {
-            request: requestAnimationFrame,
-            cancel: cancelAnimationFrame
+        return function (cb) {
+            // must be bound to window object
+            return cancelAnimationFrame.call(window, cb);
         };
     }()),
 
