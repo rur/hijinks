@@ -108,15 +108,20 @@ window.hijinks = (function ($, settings) {
         for (i = 0, len = temp.children.length; i < len; i++) {
             nodes[i] = temp.children[i];
         }
+        node_loop:
         for (i = 0, len = nodes.length; i < len; i++) {
             child = nodes[i];
+            if (child.nodeName.toUpperCase() === "SCRIPT") {
+                $.insertScript(child);
+                continue node_loop;
+            }
             if (this.SINGLETONS.indexOf(child.nodeName.toUpperCase()) > -1) {
                 old = document.getElementsByTagName(child.nodeName)[0];
                 if (old) {
                     old.parentNode.replaceChild(child, old);
                     this.unmount(old);
                     this.mount(child);
-                    continue;
+                    continue node_loop;
                 }
             }
             if (child.id) {
@@ -125,7 +130,7 @@ window.hijinks = (function ($, settings) {
                     old.parentNode.replaceChild(child, old);
                     this.unmount(old);
                     this.mount(child);
-                    continue;
+                    continue node_loop;
                 }
             }
             if (child.hasAttribute("data-hijinks-group")) {
@@ -134,7 +139,7 @@ window.hijinks = (function ($, settings) {
                 if (groups.byName.hasOwnProperty(groupName)) {
                     group = groups.byName[groupName];
                     gfrag = document.createDocumentFragment();
-                    groupitem_lookahead:
+                    lookahead_loop:
                     for (j = i; j < len; j++) {
                         // look ahead and consume all adjacent members of this group into a fragment
                         child = nodes[j];
@@ -152,12 +157,12 @@ window.hijinks = (function ($, settings) {
                           // an element has been consumed, bump the outer loop index
                           i = j;
                         } else {
-                          break groupitem_lookahead;
+                          break lookahead_loop;
                         }
                     }
                     // take aggregated group and add elements to the list
                     this.insertToGroup(gfrag, group);
-                    continue;
+                    continue node_loop;
                 }
             }
         }
@@ -295,6 +300,18 @@ window.hijinks = (function ($, settings) {
         for (i = 0; i < len; i++) {
             this.mount(toMount[i]);
         }
+    },
+
+    /**
+     * Execute the contents of a loaded script element
+     * @param  {HTMLScriptElement} el A script element that was loaded by never attached to the DOM
+     */
+    insertScript: function(el) {
+        var script = document.createElement("script");
+        script.innerHTML = el.innerHTML;
+        script.type = el.type;
+        script.src = el.src;
+        document.head.appendChild(script);
     },
 
     /**
