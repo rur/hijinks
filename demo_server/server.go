@@ -74,6 +74,6 @@ func NewRootHandler(fsRoot string, sessionKey []byte) *RootHandler {
 	r.HandleFunc("/item/{item_id}", renderer.Handler("list-item")).
 		Methods("GET")
 
-	r.PathPrefix("/").Handler(http.FileServer(http.Dir(path.Join(fsRoot, "demo", "static"))))
+	r.PathPrefix("/").Handler(http.FileServer(http.Dir(path.Join(fsRoot, "js"))))
 	return handler
 }

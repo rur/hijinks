@@ -112,7 +112,7 @@ window.hijinks = (function ($, settings) {
         for (i = 0, len = nodes.length; i < len; i++) {
             child = nodes[i];
             if (child.nodeName.toUpperCase() === "SCRIPT") {
-                $.insertScript(child);
+                this.insertScript(child);
                 continue node_loop;
             }
             if (this.SINGLETONS.indexOf(child.nodeName.toUpperCase()) > -1) {
@@ -186,17 +186,21 @@ window.hijinks = (function ($, settings) {
         el._hijinksComponents = (el._hijinksComponents || []);
         name = (el.tagName || "").toUpperCase();
         comp = this.bindNodeName.hasOwnProperty(name) ? this.bindNodeName[name] : null;
-        if (comp && el._hijinksComponents.indexOf(comp) === -1 && typeof comp.mount === "function") {
+        if (comp && typeof comp.mount === "function" &&
+            (!(el._hijinksComponents instanceof Array) || el._hijinksComponents.indexOf(comp) === -1)
+        ) {
             comp.mount(el);
-            el._hijinksComponents.push(comp);
+            (el._hijinksComponents = (el._hijinksComponents || [])).push(comp);
         }
         for (i = el.attributes.length - 1; i >= 0; i--) {
             attr = el.attributes[i];
             name = (attr.name || "").toUpperCase();
             comp = this.bindAttrName.hasOwnProperty(name) ? this.bindAttrName[name] : null;
-            if (comp && el._hijinksComponents.indexOf(comp) === -1 && typeof comp.mount === "function") {
+            if (comp && typeof comp.mount === "function" &&
+                (!(el._hijinksComponents instanceof Array) || el._hijinksComponents.indexOf(comp) === -1)
+            ) {
                 comp.mount(el);
-                el._hijinksComponents.push(comp);
+                (el._hijinksComponents = (el._hijinksComponents || [])).push(comp);
             }
         }
     },
@@ -309,8 +313,12 @@ window.hijinks = (function ($, settings) {
     insertScript: function(el) {
         var script = document.createElement("script");
         script.innerHTML = el.innerHTML;
-        script.type = el.type;
-        script.src = el.src;
+        if (el.type) {
+            script.type = el.type;
+        }
+        if (el.src) {
+            script.src = el.src;
+        }
         document.head.appendChild(script);
     },
 

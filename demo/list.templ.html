@@ -2,15 +2,15 @@
 
 {{block "content-list" . -}}
 <div id="content-list">
-  <p><a href="/" hijinks>Hide list</a></p>
+  <p><a href="/" target="_hijinks_partial">Hide list</a></p>
   <p>
-    <form id="list-form" action="/list" method="POST" hijinks autocomplete="off"><input type="text" name="value" placeholder="Enter item here!"></form>
+    <form id="list-form" action="/list" method="POST"  target="_hijinks_partial" autocomplete="off"><input type="text" name="value" placeholder="Enter item here!"></form>
   </p>
   <ul>
     {{hijinksGroup "content-list" true }}
     {{range $item := . -}}
     {{block "content-list-item" $item -}}
-    <li id="list-item-{{.Key}}" data-hijinks-group="content-list">{{.Value}} <a href="/item/{{.Key}}" hijinks>refresh!</a></li>
+    <li id="list-item-{{.Key}}" data-hijinks-group="content-list">{{.Value}} <a href="/item/{{.Key}}" target="_hijinks_partial">refresh!</a></li>
     {{- end}}
     {{end}}
   </ul>
