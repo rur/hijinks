@@ -1,7 +1,7 @@
 // hijinks clientside library implementation here
 
-window.hijinks = (function($, settings) {
-    "use strict";
+window.hijinks = (function($, config) {
+    'use strict';
     /**
      * Hijinks API Constructor
      *
@@ -15,7 +15,7 @@ window.hijinks = (function($, settings) {
             this._setup = setup;
         }
         this._setup = (this._setup || []).slice();
-        $.bindComponentsAsync(this._setup);
+        $.bindComponents(this._setup);
     }
 
     /**
@@ -63,19 +63,19 @@ window.hijinks = (function($, settings) {
             req.setRequestHeader('Content-Type', encoding || 'application/x-www-form-urlencoded');
         }
         req.onload = function() {
-            $.ajaxSuccess(this);
+            $.ajaxSuccess(req);
         };
         req.send(data || null);
     };
 
     // api
-    return new Hijinks(settings);
+    return new Hijinks(config);
 }({
     //
     // Private
     //
-    bindNodeName: {},
-    bindAttrName: {},
+    bindTagName: null,
+    bindAttrName: null,
 
     /**
      * White-list of request methods types
@@ -98,9 +98,9 @@ window.hijinks = (function($, settings) {
      * @param {XMLHttpRequest} xhr The xhr instance used to make the request
      */
     ajaxSuccess: function(xhr) {
-        "use strict";
+        'use strict';
         var $ = this;
-        var i, len, j, temp, child, old, nodes, groups, groupName, group, gfrag;
+        var i, len, j, temp, child, old, nodes, groupIndex, groupName, group, gfrag;
         if (xhr.getResponseHeader("X-Hijinks") !== "partial") {
             return;
         }
@@ -136,10 +136,10 @@ window.hijinks = (function($, settings) {
                     }
                 }
                 if (child.hasAttribute("data-hijinks-group")) {
-                    groups = groups || $.createGroupIndex(document.body);
+                    groupIndex = groupIndex || $.createGroupIndex(document.body);
                     groupName = child.getAttribute("data-hijinks-group");
-                    if (groups.byName.hasOwnProperty(groupName)) {
-                        group = groups.byName[groupName];
+                    if (groupIndex.has(groupName)) {
+                        group = groupIndex.get(groupName);
                         gfrag = document.createDocumentFragment();
                         lookahead_loop:
                             for (j = i; j < len; j++) {
@@ -177,9 +177,9 @@ window.hijinks = (function($, settings) {
      * @param  {HTMLElement} el
      */
     mount: function(el) {
-        "use strict";
+        'use strict';
         var $ = this;
-        var i, name, comp, attr;
+        var i, len, j, name, comps, comp, attr;
         if (el.nodeType !== 1 && el.nodeType !== 10) {
             return;
         }
@@ -188,23 +188,29 @@ window.hijinks = (function($, settings) {
             $.mount(el.children[i]);
         }
         el._hijinksComponents = (el._hijinksComponents || []);
-        name = (el.tagName || "").toUpperCase();
-        comp = $.bindNodeName.hasOwnProperty(name) ? $.bindNodeName[name] : null;
-        if (comp && typeof comp.mount === "function" &&
-            (!(el._hijinksComponents instanceof Array) || el._hijinksComponents.indexOf(comp) === -1)
-        ) {
-            comp.mount(el);
-            (el._hijinksComponents = (el._hijinksComponents || [])).push(comp);
-        }
-        for (i = el.attributes.length - 1; i >= 0; i--) {
-            attr = el.attributes[i];
-            name = (attr.name || "").toUpperCase();
-            comp = $.bindAttrName.hasOwnProperty(name) ? $.bindAttrName[name] : null;
+        comps = $.bindTagName.get(el.tagName);
+        len = comps.length;
+        for (i = 0; i < len; i++) {
+            comp = comps[i];
             if (comp && typeof comp.mount === "function" &&
                 (!(el._hijinksComponents instanceof Array) || el._hijinksComponents.indexOf(comp) === -1)
             ) {
                 comp.mount(el);
                 (el._hijinksComponents = (el._hijinksComponents || [])).push(comp);
+            }
+        }
+        for (j = el.attributes.length - 1; j >= 0; j--) {
+            attr = el.attributes[j];
+            comps = $.bindAttrName.get(attr.name);
+            len = comps.length;
+            for (i = 0; i < len; i++) {
+                comp = comps[i];
+                if (comp && typeof comp.mount === "function" &&
+                    (!(el._hijinksComponents instanceof Array) || el._hijinksComponents.indexOf(comp) === -1)
+                ) {
+                    comp.mount(el);
+                    (el._hijinksComponents = (el._hijinksComponents || [])).push(comp);
+                }
             }
         }
     },
@@ -216,7 +222,7 @@ window.hijinks = (function($, settings) {
      * @param  {HTMLElement} el
      */
     unmount: function(el) {
-        "use strict";
+        'use strict';
         var $ = this;
         var i, comp;
         // TODO: do this with a stack not recursion
@@ -240,18 +246,18 @@ window.hijinks = (function($, settings) {
      * @param  {Array} setup List of component definitions
      */
     bindComponents: function(setup) {
-        "use strict";
+        'use strict';
         var $ = this;
         var def, i, len = setup.length;
-        $.bindNodeName = {};
-        $.bindAttrName = {};
+        $.bindTagName = $.defaultDict(Array, true);
+        $.bindAttrName = $.defaultDict(Array, true);
         for (i = 0; i < len; i++) {
             def = setup[i];
             if (def.tagName) {
-                $.bindNodeName[def.tagName.toUpperCase()] = def;
+                $.bindTagName.get(def.tagName.toUpperCase()).push(def);
             }
             if (def.attrName) {
-                $.bindAttrName[def.attrName.toUpperCase()] = def;
+                $.bindAttrName.get(def.attrName.toUpperCase()).push(def);
             }
         }
         $.mount(document.body);
@@ -263,7 +269,7 @@ window.hijinks = (function($, settings) {
      * @param  {Array} setup List of component definitions
      */
     bindComponentsAsync: function(setup) {
-        "use strict";
+        'use strict';
         var $ = this;
         $.cancelAnimationFrame($._bindCompId);
         $._bindCompId = $.requestAnimationFrame(function() {
@@ -279,7 +285,7 @@ window.hijinks = (function($, settings) {
      * @param  {Object} group The group definition taken from the HijinksGroupIndex
      */
     insertToGroup: function(el, group) {
-        "use strict";
+        'use strict';
         var $ = this;
         var toMount, len, i;
         var parent = group && (group.element.parentElement || group.element.parentNode);
@@ -323,7 +329,7 @@ window.hijinks = (function($, settings) {
      * @param  {HTMLScriptElement} el A script element that was loaded by never attached to the DOM
      */
     insertScript: function(el) {
-        "use strict";
+        'use strict';
         var script = document.createElement("script");
         script.innerHTML = el.innerHTML;
         if (el.type) {
@@ -342,7 +348,7 @@ window.hijinks = (function($, settings) {
      * @return {string} the url with hijinks query parameter added
      */
     hijinksURL: function(url) {
-        "use strict";
+        'use strict';
         var _url, i, hash, j, query, path;
         try {
             _url = url.toString();
@@ -369,7 +375,7 @@ window.hijinks = (function($, settings) {
      * see: https://gist.github.com/paulirish/1579671
      */
     requestAnimationFrame: (function() {
-        "use strict";
+        'use strict';
         var requestAnimationFrame = window.requestAnimationFrame;
         var lastTime = 0;
         var vendors = ['ms', 'moz', 'webkit', 'o'];
@@ -402,7 +408,7 @@ window.hijinks = (function($, settings) {
      * see: https://gist.github.com/paulirish/1579671
      */
     cancelAnimationFrame: (function() {
-        "use strict";
+        'use strict';
         var cancelAnimationFrame = window.cancelAnimationFrame;
         var vendors = ['ms', 'moz', 'webkit', 'o'];
         for (var i = 0; i < vendors.length && !cancelAnimationFrame; ++i) {
@@ -430,7 +436,7 @@ window.hijinks = (function($, settings) {
      * @returns {Function} Bound function
      */
     bind: function(fn, self) {
-        "use strict";
+        'use strict';
         var args = [].slice.call(arguments, 2);
         if (typeof fn.bind === "function") {
             return fn.bind.apply(fn, [self].concat(args));
@@ -447,25 +453,34 @@ window.hijinks = (function($, settings) {
      * @param  {string} url The url to set as the location href
      */
     browserNavigate: function(url) {
-        "use strict";
+        'use strict';
         window.location.href = url;
     },
 
     /**
-     * class used the search for hijinks group comment elements
+     * Search a provided context for hijinks group comment elements
      *
-     * @constructor
+     * stack search adapted from http://stackoverflow.com/a/25388984/81962
      *
+     * @param {HTMLElement} context The DOM Element to search for comment nodes
+     * @returns {DefaultDict} Dictionary construct containing HijinksGroup defs key by name
      */
-    createGroupIndex: (function() {
-        "use strict";
-        var HJ_GROUP_REG = /^\s*hijinks-group: ([a-zA-Z][\w-\d]*)( prepend)?\s*$/;
-
-        function HijinksGroupIndex(context) {
-            // scan DOM from group comment nodes
-            // stack search adapted from http://stackoverflow.com/a/25388984/81962
-            this.byName = {};
-            var conf, el, i, node,
+    createGroupIndex: (function () {
+        'use strict';
+        /**
+         * @private
+         * @constructor
+         */
+       function HijinksGroup() {
+           this.name = null;
+           this.element = null;
+           this.prepend = false;
+       }
+       return function(context) {
+            var $ = this;
+            var HJ_GROUP_REG = /^\s*hijinks-group: ([a-zA-Z][\w-\d]*)( prepend)?\s*$/;
+            var index = $.defaultDict(HijinksGroup);
+            var conf, el, i, node, group,
                 elementPath = [context];
             while (elementPath.length > 0) {
                 el = elementPath.pop();
@@ -474,20 +489,60 @@ window.hijinks = (function($, settings) {
                     if (node.nodeType === 8) {
                         conf = node.nodeValue.match(HJ_GROUP_REG);
                         if (conf) {
-                            this.byName[conf[1]] = {
-                                name: conf[1],
-                                element: node,
-                                prepend: conf[2] === " prepend"
-                            };
+                            group = index.get(conf[1]);
+                            group.name = conf[1];
+                            group.element = node;
+                            group.prepend = conf[2] === " prepend";
                         }
                     } else {
                         elementPath.push(node);
                     }
                 }
             }
-        }
-        return function(context) {
-            return new HijinksGroupIndex(context);
+            return index;
         };
-    }())
+    }()),
+    /**
+     * Create a dictionary that will construct values for missing keys
+     *
+     * @param   {function}    Cons            Constructor for missing values, invoked using 'new' operator
+     * @param   {boolean}     caseInsensitive If true, the case of the keys will be normalized
+     * @returns {DefaultDict} Object implementing { get(string)Cons, has(string)bool } interface
+     */
+    defaultDict: function(Cons, caseInsensitive) {
+        'use strict';
+        /**
+         * @private
+         * @constructor
+         */
+        function DefaultDict() {
+            this._store = {};
+        }
+        DefaultDict.prototype.get = function(key) {
+            if (typeof key != 'string' || key === '') {
+                throw new Error("DefaultDict: invalid key (" + key + ")");
+            }
+            // underscore used to avoid collisions with Object prototype
+            var _key = "_" + key;
+            if (caseInsensitive) {
+                _key = _key.toUpperCase();
+            }
+            if (this._store.hasOwnProperty(_key)) {
+                return this._store[_key];
+            } else {
+                return (this._store[_key] = new Cons());
+            }
+        };
+        DefaultDict.prototype.has = function(key) {
+            if (typeof key != 'string' || key === '') {
+                throw new Error("DefaultDict: invalid key (" + key + ")");
+            }
+            var _key = "_" + key;
+            if (caseInsensitive) {
+                _key = _key.toUpperCase();
+            }
+            return this._store.hasOwnProperty(_key);
+        };
+        return new DefaultDict();
+    }
 }, window.hijinks));

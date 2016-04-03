@@ -189,7 +189,49 @@ describe 'Hijinks', ->
         expect(this.component.unmount.calledWith(this.el)).to.be.true
 
       it 'should have called the unmount on the attribute', ->
-        expect(this.component.unmount.calledWith(this.el2)).to.be.tru
+        expect(this.component.unmount.calledWith(this.el2)).to.be.true
+
+  describe 'binding two components', ->
+    beforeEach ->
+      this.el = document.createElement("test-node")
+      this.el.setAttribute("id", "test")
+      document.body.appendChild(this.el)
+      this.el2 = document.createElement("div")
+      this.el2.setAttribute("id", "test2")
+      this.el2.setAttribute("test-node", 123)
+      document.body.appendChild(this.el2)
+      # component definition:
+      this.component = {
+        tagName: "test-node",
+        attrName: "test-node",
+        mount: sinon.spy(),
+        unmount: sinon.spy()
+      }
+      this.component2 = {
+        tagName: "test-node",
+        attrName: "test-node",
+        mount: sinon.spy(),
+        unmount: sinon.spy()
+      }
+      hijinks.push(this.component)
+      hijinks.push(this.component2)
+      window.requestAnimationFrame.lastCall.args[0]()
+
+    afterEach ->
+      document.body.removeChild(document.getElementById("test"))
+      document.body.removeChild(document.getElementById("test2"))
+
+    it 'should have called mount on component 1 for the tagName', ->
+      expect(this.component.mount.calledWith(this.el)).to.be.true
+
+    it 'should have called mount on component 1 for the attrName', ->
+      expect(this.component.mount.calledWith(this.el2)).to.be.true
+
+    it 'should have called mount on component 2 for the tagName', ->
+      expect(this.component2.mount.calledWith(this.el)).to.be.true
+
+    it 'should have called mount on component 2 for the attrName', ->
+      expect(this.component2.mount.calledWith(this.el2)).to.be.true
 
   describe 'inserting groups', ->
     beforeEach ->
@@ -253,5 +295,3 @@ describe 'Hijinks', ->
       for child in this.list2.children
         unless mount.calledWith(child)
           throw new chai.AssertionError("Expected " + child + " to have been mounted")
-
-
