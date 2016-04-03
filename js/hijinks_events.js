@@ -17,9 +17,9 @@
             if (el.removeEventListener) {
                 el.removeEventListener('click', $.documentClick);
                 el.removeEventListener('submit', $.onSubmit);
-            } else if (el.dettachEvent) {
-                el.dettachEvent('onclick', $.documentClick);
-                el.dettachEvent('onsubmit', $.onSubmit);
+            } else if (el.detachEvent) {
+                el.detachEvent('onclick', $.documentClick);
+                el.detachEvent('onsubmit', $.onSubmit);
             }
         }
     };

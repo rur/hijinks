@@ -1,6 +1,7 @@
 // hijinks clientside library implementation here
 
-window.hijinks = (function ($, settings) {
+window.hijinks = (function($, settings) {
+    "use strict";
     /**
      * Hijinks API Constructor
      *
@@ -22,7 +23,7 @@ window.hijinks = (function ($, settings) {
      * @param  {Object} def Dict containing component
      * @return {[type]}     [description]
      */
-    Hijinks.prototype.push = function (def) {
+    Hijinks.prototype.push = function(def) {
         this._setup.push(def);
         $.bindComponentsAsync(this._setup);
     };
@@ -31,7 +32,7 @@ window.hijinks = (function ($, settings) {
      * trigger mount event on a node and it's subtree
      * @param  {HTMLElement} el
      */
-    Hijinks.prototype.mount = function (el) {
+    Hijinks.prototype.mount = function(el) {
         $.mount(el);
     };
 
@@ -39,7 +40,7 @@ window.hijinks = (function ($, settings) {
      * trigger mount event on a node and it's subtree
      * @param  {HTMLElement} el
      */
-    Hijinks.prototype.unmount = function (el) {
+    Hijinks.prototype.unmount = function(el) {
         $.unmount(el);
     };
 
@@ -51,7 +52,7 @@ window.hijinks = (function ($, settings) {
      * @param  {string} method The request method GET|POST|...
      * @param  {string} url    The url
      */
-    Hijinks.prototype.request = function (method, url, data, encoding) {
+    Hijinks.prototype.request = function(method, url, data, encoding) {
         if ($.METHODS.indexOf(method.toUpperCase()) === -1) {
             throw new Error("Hijinks: Unknown request method '" + method + "'");
         }
@@ -62,7 +63,7 @@ window.hijinks = (function ($, settings) {
             req.setRequestHeader('Content-Type', encoding || 'application/x-www-form-urlencoded');
         }
         req.onload = function() {
-          $.ajaxSuccess(this);
+            $.ajaxSuccess(this);
         };
         req.send(data || null);
     };
@@ -80,7 +81,7 @@ window.hijinks = (function ($, settings) {
      * White-list of request methods types
      * @type {Array}
      */
-    METHODS: ['POST','GET','PUT','PATCH','DELETE'],
+    METHODS: ['POST', 'GET', 'PUT', 'PATCH', 'DELETE'],
 
     /**
      * List of HTML element for which there can be only one
@@ -96,8 +97,9 @@ window.hijinks = (function ($, settings) {
      *
      * @param {XMLHttpRequest} xhr The xhr instance used to make the request
      */
-    ajaxSuccess: function (xhr) {
+    ajaxSuccess: function(xhr) {
         "use strict";
+        var $ = this;
         var i, len, j, temp, child, old, nodes, groups, groupName, group, gfrag;
         if (xhr.getResponseHeader("X-Hijinks") !== "partial") {
             return;
@@ -109,63 +111,63 @@ window.hijinks = (function ($, settings) {
             nodes[i] = temp.children[i];
         }
         node_loop:
-        for (i = 0, len = nodes.length; i < len; i++) {
-            child = nodes[i];
-            if (child.nodeName.toUpperCase() === "SCRIPT") {
-                this.insertScript(child);
-                continue node_loop;
-            }
-            if (this.SINGLETONS.indexOf(child.nodeName.toUpperCase()) > -1) {
-                old = document.getElementsByTagName(child.nodeName)[0];
-                if (old) {
-                    old.parentNode.replaceChild(child, old);
-                    this.unmount(old);
-                    this.mount(child);
+            for (i = 0, len = nodes.length; i < len; i++) {
+                child = nodes[i];
+                if (child.nodeName.toUpperCase() === "SCRIPT") {
+                    $.insertScript(child);
                     continue node_loop;
                 }
-            }
-            if (child.id) {
-                old = document.getElementById(child.id);
-                if (old) {
-                    old.parentNode.replaceChild(child, old);
-                    this.unmount(old);
-                    this.mount(child);
-                    continue node_loop;
-                }
-            }
-            if (child.hasAttribute("data-hijinks-group")) {
-                groups = groups || new this.HijinksGroupIndex(document.body);
-                groupName = child.getAttribute("data-hijinks-group");
-                if (groups.byName.hasOwnProperty(groupName)) {
-                    group = groups.byName[groupName];
-                    gfrag = document.createDocumentFragment();
-                    lookahead_loop:
-                    for (j = i; j < len; j++) {
-                        // look ahead and consume all adjacent members of this group into a fragment
-                        child = nodes[j];
-                        if (child && child.getAttribute("data-hijinks-group") === groupName) {
-                          // group members with a matched id will be inserted to the DOM before the
-                          // fragment is added to the end of the group
-                          old = document.getElementById(child.id);
-                          if (old) {
-                            old.parentNode.replaceElement(child, old);
-                            this.unmount(old);
-                            this.mount(child);
-                          } else {
-                            gfrag.appendChild(child);
-                          }
-                          // an element has been consumed, bump the outer loop index
-                          i = j;
-                        } else {
-                          break lookahead_loop;
-                        }
+                if ($.SINGLETONS.indexOf(child.nodeName.toUpperCase()) > -1) {
+                    old = document.getElementsByTagName(child.nodeName)[0];
+                    if (old) {
+                        old.parentNode.replaceChild(child, old);
+                        $.unmount(old);
+                        $.mount(child);
+                        continue node_loop;
                     }
-                    // take aggregated group and add elements to the list
-                    this.insertToGroup(gfrag, group);
-                    continue node_loop;
+                }
+                if (child.id) {
+                    old = document.getElementById(child.id);
+                    if (old) {
+                        old.parentNode.replaceChild(child, old);
+                        $.unmount(old);
+                        $.mount(child);
+                        continue node_loop;
+                    }
+                }
+                if (child.hasAttribute("data-hijinks-group")) {
+                    groups = groups || $.createGroupIndex(document.body);
+                    groupName = child.getAttribute("data-hijinks-group");
+                    if (groups.byName.hasOwnProperty(groupName)) {
+                        group = groups.byName[groupName];
+                        gfrag = document.createDocumentFragment();
+                        lookahead_loop:
+                            for (j = i; j < len; j++) {
+                                // look ahead and consume all adjacent members of this group into a fragment
+                                child = nodes[j];
+                                if (child && child.getAttribute("data-hijinks-group") === groupName) {
+                                    // group members with a matched id will be inserted to the DOM before the
+                                    // fragment is added to the end of the group
+                                    old = document.getElementById(child.id);
+                                    if (old) {
+                                        old.parentNode.replaceElement(child, old);
+                                        $.unmount(old);
+                                        $.mount(child);
+                                    } else {
+                                        gfrag.appendChild(child);
+                                    }
+                                    // an element has been consumed, bump the outer loop index
+                                    i = j;
+                                } else {
+                                    break lookahead_loop;
+                                }
+                            }
+                            // take aggregated group and add elements to the list
+                        $.insertToGroup(gfrag, group);
+                        continue node_loop;
+                    }
                 }
             }
-        }
     },
 
     /**
@@ -174,18 +176,20 @@ window.hijinks = (function ($, settings) {
      *
      * @param  {HTMLElement} el
      */
-    mount: function (el) {
+    mount: function(el) {
+        "use strict";
+        var $ = this;
         var i, name, comp, attr;
         if (el.nodeType !== 1 && el.nodeType !== 10) {
             return;
         }
         // TODO: do this with a stack not recursion
         for (i = 0; i < el.children.length; i++) {
-            this.mount(el.children[i]);
+            $.mount(el.children[i]);
         }
         el._hijinksComponents = (el._hijinksComponents || []);
         name = (el.tagName || "").toUpperCase();
-        comp = this.bindNodeName.hasOwnProperty(name) ? this.bindNodeName[name] : null;
+        comp = $.bindNodeName.hasOwnProperty(name) ? $.bindNodeName[name] : null;
         if (comp && typeof comp.mount === "function" &&
             (!(el._hijinksComponents instanceof Array) || el._hijinksComponents.indexOf(comp) === -1)
         ) {
@@ -195,7 +199,7 @@ window.hijinks = (function ($, settings) {
         for (i = el.attributes.length - 1; i >= 0; i--) {
             attr = el.attributes[i];
             name = (attr.name || "").toUpperCase();
-            comp = this.bindAttrName.hasOwnProperty(name) ? this.bindAttrName[name] : null;
+            comp = $.bindAttrName.hasOwnProperty(name) ? $.bindAttrName[name] : null;
             if (comp && typeof comp.mount === "function" &&
                 (!(el._hijinksComponents instanceof Array) || el._hijinksComponents.indexOf(comp) === -1)
             ) {
@@ -211,11 +215,13 @@ window.hijinks = (function ($, settings) {
      *
      * @param  {HTMLElement} el
      */
-    unmount: function (el) {
+    unmount: function(el) {
+        "use strict";
+        var $ = this;
         var i, comp;
         // TODO: do this with a stack not recursion
         for (i = 0; i < el.children.length; i++) {
-            this.unmount(el.children[i]);
+            $.unmount(el.children[i]);
         }
         if (el._hijinksComponents instanceof Array) {
             for (i = el._hijinksComponents.length - 1; i >= 0; i--) {
@@ -233,20 +239,22 @@ window.hijinks = (function ($, settings) {
      *
      * @param  {Array} setup List of component definitions
      */
-    bindComponents: function (setup) {
+    bindComponents: function(setup) {
+        "use strict";
+        var $ = this;
         var def, i, len = setup.length;
-        this.bindNodeName = {};
-        this.bindAttrName = {};
+        $.bindNodeName = {};
+        $.bindAttrName = {};
         for (i = 0; i < len; i++) {
             def = setup[i];
             if (def.tagName) {
-                this.bindNodeName[def.tagName.toUpperCase()] = def;
+                $.bindNodeName[def.tagName.toUpperCase()] = def;
             }
             if (def.attrName) {
-                this.bindAttrName[def.attrName.toUpperCase()] = def;
+                $.bindAttrName[def.attrName.toUpperCase()] = def;
             }
         }
-        this.mount(document.body);
+        $.mount(document.body);
     },
 
     /**
@@ -255,10 +263,12 @@ window.hijinks = (function ($, settings) {
      * @param  {Array} setup List of component definitions
      */
     bindComponentsAsync: function(setup) {
-        this.cancelAnimationFrame(this._id);
-        this._id = this.requestAnimationFrame(this.bind(function () {
-            this.bindComponents(setup);
-        }, this));
+        "use strict";
+        var $ = this;
+        $.cancelAnimationFrame($._bindCompId);
+        $._bindCompId = $.requestAnimationFrame(function() {
+            $.bindComponents(setup);
+        });
     },
 
     /**
@@ -268,7 +278,9 @@ window.hijinks = (function ($, settings) {
      * @param  {HTMLElement|DocumentFragment} el
      * @param  {Object} group The group definition taken from the HijinksGroupIndex
      */
-    insertToGroup: function (el, group) {
+    insertToGroup: function(el, group) {
+        "use strict";
+        var $ = this;
         var toMount, len, i;
         var parent = group && (group.element.parentElement || group.element.parentNode);
         if (!parent) return;
@@ -302,7 +314,7 @@ window.hijinks = (function ($, settings) {
             parent.insertBefore(el, last.nextSubling);
         }
         for (i = 0; i < len; i++) {
-            this.mount(toMount[i]);
+            $.mount(toMount[i]);
         }
     },
 
@@ -311,6 +323,7 @@ window.hijinks = (function ($, settings) {
      * @param  {HTMLScriptElement} el A script element that was loaded by never attached to the DOM
      */
     insertScript: function(el) {
+        "use strict";
         var script = document.createElement("script");
         script.innerHTML = el.innerHTML;
         if (el.type) {
@@ -328,25 +341,26 @@ window.hijinks = (function ($, settings) {
      * @param {string} url
      * @return {string} the url with hijinks query parameter added
      */
-    hijinksURL: function (url) {
-      var _url, i, hash, j, query, path;
-      try {
-        _url = url.toString();
-      } catch (e) {
-        return "";
-      }
-      i = _url.indexOf("#");
-      hash = i > -1 ? _url.slice(i + 1) : "";
-      j = _url.indexOf("?");
-      query = j > -1 ? _url.slice(j + 1, (i > -1 ? i : void 0)) : "";
-      path = _url.slice(0, (j > -1 ? j : void 0));
-      if (/(^|&)hijinks(=|&|$)/.test(query)) {
+    hijinksURL: function(url) {
+        "use strict";
+        var _url, i, hash, j, query, path;
+        try {
+            _url = url.toString();
+        } catch (e) {
+            return "";
+        }
+        i = _url.indexOf("#");
+        hash = i > -1 ? _url.slice(i + 1) : "";
+        j = _url.indexOf("?");
+        query = j > -1 ? _url.slice(j + 1, (i > -1 ? i : void 0)) : "";
+        path = _url.slice(0, (j > -1 ? j : void 0));
+        if (/(^|&)hijinks(=|&|$)/.test(query)) {
+            return _url;
+        }
+        _url = path + "?" + (query ? query + "&" : "") +
+            "hijinks" +
+            (hash ? "#" + hash : "");
         return _url;
-      }
-      _url = path + "?" + (query ? query + "&" : "") +
-        "hijinks" +
-        (hash ? "#" + hash : "");
-      return _url;
     },
 
     /**
@@ -355,25 +369,28 @@ window.hijinks = (function ($, settings) {
      * see: https://gist.github.com/paulirish/1579671
      */
     requestAnimationFrame: (function() {
+        "use strict";
         var requestAnimationFrame = window.requestAnimationFrame;
         var lastTime = 0;
         var vendors = ['ms', 'moz', 'webkit', 'o'];
-        for(var i = 0; i < vendors.length && !requestAnimationFrame; ++i) {
-            requestAnimationFrame = window[vendors[i]+'RequestAnimationFrame'];
+        for (var i = 0; i < vendors.length && !requestAnimationFrame; ++i) {
+            requestAnimationFrame = window[vendors[i] + 'RequestAnimationFrame'];
         }
 
         if (!requestAnimationFrame) {
             requestAnimationFrame = function(callback, element) {
                 var currTime = new Date().getTime();
                 var timeToCall = Math.max(0, 16 - (currTime - lastTime));
-                var id = window.setTimeout(function() { callback(currTime + timeToCall); },
-                  timeToCall);
+                var id = window.setTimeout(function() {
+                        callback(currTime + timeToCall);
+                    },
+                    timeToCall);
                 lastTime = currTime + timeToCall;
                 return id;
             };
         }
 
-        return function (cb) {
+        return function(cb) {
             // must be bound to window object
             return requestAnimationFrame.call(window, cb);
         };
@@ -384,11 +401,12 @@ window.hijinks = (function ($, settings) {
      *
      * see: https://gist.github.com/paulirish/1579671
      */
-    cancelAnimationFrame: (function () {
+    cancelAnimationFrame: (function() {
+        "use strict";
         var cancelAnimationFrame = window.cancelAnimationFrame;
         var vendors = ['ms', 'moz', 'webkit', 'o'];
-        for(var i = 0; i < vendors.length && !cancelAnimationFrame; ++i) {
-            cancelAnimationFrame = window[vendors[i]+'CancelAnimationFrame'] || window[vendors[i]+'CancelRequestAnimationFrame'];
+        for (var i = 0; i < vendors.length && !cancelAnimationFrame; ++i) {
+            cancelAnimationFrame = window[vendors[i] + 'CancelAnimationFrame'] || window[vendors[i] + 'CancelRequestAnimationFrame'];
         }
 
         if (!cancelAnimationFrame) {
@@ -397,7 +415,7 @@ window.hijinks = (function ($, settings) {
             };
         }
 
-        return function (cb) {
+        return function(cb) {
             // must be bound to window object
             return cancelAnimationFrame.call(window, cb);
         };
@@ -411,7 +429,8 @@ window.hijinks = (function ($, settings) {
      * @param  {*}        args...   variadic arguments
      * @returns {Function} Bound function
      */
-    bind: function (fn, self) {
+    bind: function(fn, self) {
+        "use strict";
         var args = [].slice.call(arguments, 2);
         if (typeof fn.bind === "function") {
             return fn.bind.apply(fn, [self].concat(args));
@@ -427,7 +446,8 @@ window.hijinks = (function ($, settings) {
      *
      * @param  {string} url The url to set as the location href
      */
-    browserNavigate: function (url) {
+    browserNavigate: function(url) {
+        "use strict";
         window.location.href = url;
     },
 
@@ -437,7 +457,8 @@ window.hijinks = (function ($, settings) {
      * @constructor
      *
      */
-    HijinksGroupIndex: (function () {
+    createGroupIndex: (function() {
+        "use strict";
         var HJ_GROUP_REG = /^\s*hijinks-group: ([a-zA-Z][\w-\d]*)( prepend)?\s*$/;
 
         function HijinksGroupIndex(context) {
@@ -445,7 +466,7 @@ window.hijinks = (function ($, settings) {
             // stack search adapted from http://stackoverflow.com/a/25388984/81962
             this.byName = {};
             var conf, el, i, node,
-                    elementPath = [context];
+                elementPath = [context];
             while (elementPath.length > 0) {
                 el = elementPath.pop();
                 for (i = 0; i < el.childNodes.length; i++) {
@@ -465,6 +486,8 @@ window.hijinks = (function ($, settings) {
                 }
             }
         }
-        return HijinksGroupIndex;
-      }())
+        return function(context) {
+            return new HijinksGroupIndex(context);
+        };
+    }())
 }, window.hijinks));
