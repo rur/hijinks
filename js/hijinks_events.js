@@ -11,6 +11,8 @@
             } else if (el.attachEvent) {
                 el.attachEvent('onclick', $.documentClick);
                 el.attachEvent('onsubmit', $.onSubmit);
+            } else {
+                throw new Error("Hijink Events: Event delegation is not supported in this browser!");
             }
         },
         unmount: function (el) {

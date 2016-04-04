@@ -1,5 +1,3 @@
-// hijinks clientside library implementation here
-
 window.hijinks = (function($, config) {
     'use strict';
     /**
@@ -21,7 +19,6 @@ window.hijinks = (function($, config) {
     /**
      * Add a component definition
      * @param  {Object} def Dict containing component
-     * @return {[type]}     [description]
      */
     Hijinks.prototype.push = function(def) {
         this._setup.push(def);
@@ -74,7 +71,16 @@ window.hijinks = (function($, config) {
     //
     // Private
     //
+    /**
+     * Store the component definitions by tagName
+     * @type {DefaultDict}
+     */
     bindTagName: null,
+
+    /**
+     * Store the component definitions by attrName
+     * @type {DefaultDict}
+     */
     bindAttrName: null,
 
     /**
@@ -268,14 +274,17 @@ window.hijinks = (function($, config) {
      *
      * @param  {Array} setup List of component definitions
      */
-    bindComponentsAsync: function(setup) {
+    bindComponentsAsync: (function() {
         'use strict';
-        var $ = this;
-        $.cancelAnimationFrame($._bindCompId);
-        $._bindCompId = $.requestAnimationFrame(function() {
-            $.bindComponents(setup);
-        });
-    },
+        var id = null;
+        return function(setup) {
+            var $ = this;
+            $.cancelAnimationFrame(id);
+            id = $.requestAnimationFrame(function() {
+                $.bindComponents(setup);
+            });
+        };
+    }()),
 
     /**
      * take an element or document fragment and inserts into the tail end of
@@ -502,6 +511,7 @@ window.hijinks = (function($, config) {
             return index;
         };
     }()),
+
     /**
      * Create a dictionary that will construct values for missing keys
      *
