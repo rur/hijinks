@@ -1,5 +1,7 @@
 window.hijinks = (function($, config) {
     'use strict';
+    var onLoad = $.simpleSignal();
+
     /**
      * Hijinks API Constructor
      *
@@ -13,7 +15,7 @@ window.hijinks = (function($, config) {
             this._setup = setup;
         }
         this._setup = (this._setup || []).slice();
-        $.bindComponents(this._setup);
+        $.bindComponentsAsync(this._setup);
     }
 
     /**
@@ -21,7 +23,7 @@ window.hijinks = (function($, config) {
      * @param  {Object} def Dict containing component
      */
     Hijinks.prototype.push = function(def) {
-        this._setup.push(def);
+        if (def) this._setup.push(def);
         $.bindComponentsAsync(this._setup);
     };
 
@@ -61,9 +63,12 @@ window.hijinks = (function($, config) {
         }
         req.onload = function() {
             $.ajaxSuccess(req);
+            onLoad.trigger();
         };
         req.send(data || null);
     };
+
+    Hijinks.prototype.onLoad = onLoad.add;
 
     // api
     return new Hijinks(config);
@@ -554,5 +559,32 @@ window.hijinks = (function($, config) {
             return this._store.hasOwnProperty(_key);
         };
         return new DefaultDict();
+    },
+
+    /**
+     * The dumbest event dispatcher I can think of
+     *
+     * @return {Object} Object implementing the { add(Function)Function, trigger() } interface
+     */
+    simpleSignal: function() {
+        var listeners = [];
+        return {
+            add: function (f) {
+                var i = listeners.indexOf(f);
+                if (i === -1) {
+                    i = listeners.push(f) - 1;
+                }
+                return function remove() {
+                    listeners[i] = null;
+                };
+            },
+            trigger: function () {
+                for (var i = 0; i < listeners.length; i++) {
+                    if (typeof listeners[i] === "function") {
+                        listeners[i]();
+                    }
+                }
+            }
+        };
     }
 }, window.hijinks));

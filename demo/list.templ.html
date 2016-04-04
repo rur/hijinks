@@ -4,7 +4,7 @@
 <div id="content-list">
   <p><a href="/" hijinks-page>Hide list</a> <a href="/list" hijinks>Reload list</a></p>
   <p>
-    <form id="list-form" action="/list" method="POST" hijinks autocomplete="off"><input type="text" name="value" placeholder="Enter item here!"></form>
+    <form id="list-form" action="/list" method="POST" hijinks reset-on-load autocomplete="off"><input type="text" name="value" placeholder="Enter item here!"></form>
   </p>
   <ul>
     {{hijinksGroup "content-list" true }}

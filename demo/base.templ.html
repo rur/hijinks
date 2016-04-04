@@ -37,6 +37,20 @@ window.onload = function () {
 };
   </script>
 
+  <script type="text/javascript">
+    (window.hijinks = window.hijinks || []).push({
+      attrName: "reset-on-load",
+      mount: function(e) {
+        this.remove = window.hijinks.onLoad(function() {
+          e.reset();
+        });
+      },
+      unmount: function () {
+        this.remove();
+      },
+    });
+  </script>
+
   <script src="/hijinks_events.js"></script>
   <script src="/hijinks.js"></script>
 </body>

@@ -2,12 +2,3 @@
 {{block "content-list-item" . -}}
 <li id="list-item-{{.Key}}" data-hijinks-group="content-list"><strong>The Key: {{.Key}} - The Value = {{.Value}}</strong></li>
 {{- end}}
-<script>
-(function() {
-  var f = document.getElementById("list-form");
-  if (f) {
-    f.reset();
-  }
-}())
-</script>
-

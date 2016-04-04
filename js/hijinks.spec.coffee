@@ -12,6 +12,8 @@ describe 'Hijinks', ->
     hijinks = window.hijinks
     this.xhr.onCreate = (req) ->
       requests.push(req)
+    hijinks.push();
+    window.requestAnimationFrame.lastCall.args[0]()
 
   afterEach ->
     this.xhr.restore()
@@ -120,7 +122,7 @@ describe 'Hijinks', ->
       document.body.removeChild(document.getElementById("test"))
 
     it 'should have mounted the body element', ->
-      expect(document.body._hijinksComponents).to.eql []
+      expect(document.body._hijinksComponents).to.exist
 
     it 'should have mounted the child element', ->
       expect(this.el._hijinksComponents).to.eql []
