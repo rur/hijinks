@@ -26,6 +26,10 @@ window.hijinks.push(function ($, hijinks) {
      * @param {Function}      callback  Called when the serialization is complete (may be sync or async)
      */
     function FormSerialize(elm, callback) {
+        if (!(this instanceof FormSerialize)) {
+            return new FormSerialize(elm, callback);
+        }
+
         var nFile, sFieldType, oField, oSegmReq, oFile;
         var bIsPost = elm.method.toLowerCase() === "post";
         var fFilter = window.escape;
@@ -368,6 +372,6 @@ window.hijinks.push(function ($, hijinks) {
      * Serialize a form data for use in an AJAX request
      */
     processFormData: function (formElement, callback) {
-        return window.hijinks.FormSerialize(formElement, callback);
+        return new window.hijinks.FormSerialize(formElement, callback);
     }
 }, window.hijinks));

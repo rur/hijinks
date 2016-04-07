@@ -95,7 +95,8 @@ window.hijinks = (function ($, config) {
     bindAttrName: null,
 
     /**
-     * Hijinks library extensions
+     * Hijinks library extensions, object attached to the
+     * prototype chain of the main Hijinks library
      * @type {Object}
      */
     extensions: {},
@@ -276,7 +277,7 @@ window.hijinks = (function ($, config) {
         $.bindAttrName = $.defaultDict(Array, true);
         for (i = 0; i < len; i++) {
             def = setup[i];
-            if (def.extensionName && def.hasOwnProperty("extension")) {
+            if (def.extensionName && def.hasOwnProperty('extension')) {
                 $.extensions[def.extensionName] = def.extension;
             }
             if (def.tagName) {
