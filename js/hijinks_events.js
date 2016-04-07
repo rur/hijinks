@@ -1,4 +1,216 @@
-(window.hijinks = (window.hijinks || [])).push(function ($) {
+// extend the hijinks library with navigation and form handling capabilities
+window.hijinks = (window.hijinks || []);
+
+/**
+ * hijinks.FormSerialize class is used to serialize form input data for XHR
+ *
+ * The aim is to handle the widest possible variety of methods and browser capabilities.
+ * However AJAX file upload will not work without either FileReader or FormData.
+ *
+ * adapted from: https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/Using_XMLHttpRequest#Submitting_forms_and_uploading_files
+ */
+window.hijinks.FormSerialize = (function ($, hijinks) {
+    'use strict';
+    /**
+     * techniques:
+     */
+    var URLEN_GET = 0;   // GET method
+    var URLEN_POST = 1;  // POST method, enctype is application/x-www-form-urlencoded (default)
+    var PLAIN_POST = 2;  // POST method, enctype is text/plain
+    var MULTI_POST = 3;  // POST method, enctype is multipart/form-data
+
+    /**
+     * @private
+     * @constructor
+     * @param {FormElement}   elm       The form to be serialized
+     * @param {Function}      callback  Called when the serialization is complete (may be sync or async)
+     */
+    function FormSerialize(elm, callback) {
+        var nFile, sFieldType, oField, oSegmReq, oFile;
+        var bIsPost = elm.method.toLowerCase() === "post";
+        var fFilter = window.escape;
+
+        this.onRequestReady = callback;
+        this.receiver = elm.action;
+        this.status = 0;
+        this.segments = [];
+
+        if (bIsPost) {
+            this.contentType = elm.enctype ? elm.enctype : "application\/x-www-form-urlencoded";
+            switch (this.contentType) {
+                case "multipart\/form-data":
+                    this.technique = MULTI_POST;
+
+                    try {
+                        // ...to let FormData do all the work
+                        this.data = new window.FormData(elm);
+                    } catch (e) {}
+
+                    if (this.data) {
+                        this.processStatus();
+                        return;
+                    }
+                    break;
+
+                case "text\/plain":
+                    this.technique = PLAIN_POST;
+                    fFilter = $.plainEscape;
+                    break;
+
+                default:
+                    this.technique = URLEN_POST;
+            }
+        } else {
+            this.technique = URLEN_GET;
+        }
+
+        for (var i = 0, len = elm.elements.length; i < len; i++) {
+            oField = elm.elements[i];
+            if (!oField.hasAttribute("name")) { continue; }
+            sFieldType = oField.nodeName.toUpperCase() === "INPUT" ? oField.getAttribute("type").toUpperCase() : "TEXT";
+            if (sFieldType === "FILE" && oField.files.length > 0) {
+                if (this.technique === MULTI_POST) {
+                    if (!window.FileReader) {
+                        throw new Error("Operation not supported: cannot upload a document via AJAX if FileReader is not supported");
+                    }
+                    /* enctype is multipart/form-data */
+                    for (nFile = 0; nFile < oField.files.length; nFile++) {
+                        oFile = oField.files[nFile];
+                        oSegmReq = new window.FileReader();
+                        oSegmReq.onload = this.fileReadHandler(oField, oFile);
+                        oSegmReq.readAsBinaryString(oFile);
+                    }
+                } else {
+                    /* enctype is application/x-www-form-urlencoded or text/plain or method is GET: files will not be sent! */
+                    for (nFile = 0; nFile < oField.files.length; this.segments.push(fFilter(oField.name) + "=" + fFilter(oField.files[nFile++].name)));
+                }
+            } else if ((sFieldType !== "RADIO" && sFieldType !== "CHECKBOX") || oField.checked) {
+                /* field type is not FILE or is FILE but is empty */
+                this.segments.push(
+                    this.technique === MULTI_POST ? /* enctype is multipart/form-data */
+                        "Content-Disposition: form-data; name=\"" + oField.name + "\"\r\n\r\n" + oField.value + "\r\n"
+                    : /* enctype is application/x-www-form-urlencoded or text/plain or method is GET */
+                        fFilter(oField.name) + "=" + fFilter(oField.value)
+                );
+            }
+        }
+        this.processStatus();
+    }
+
+    /**
+     * Create FileReader onload handler
+     *
+     * @return {function}
+     */
+    FormSerialize.prototype.fileReadHandler = function (field, file) {
+        var self = this;
+        var index = self.segments.length;
+        self.segments.push(
+            "Content-Disposition: form-data; name=\"" + field.name + "\"; " +
+            "filename=\""+ file.name + "\"\r\n" +
+            "Content-Type: " + file.type + "\r\n\r\n");
+        self.status++;
+        return function (oFREvt) {
+            self.segments[index] += oFREvt.target.result + "\r\n";
+            self.status--;
+            self.processStatus();
+        };
+    };
+
+    /**
+     * Is called when a pass of serialization has completed.
+     *
+     * It will be called asynchronously if file reading is taking place.
+     */
+    FormSerialize.prototype.processStatus = function () {
+        if (this.status > 0) { return; }
+        /* the form is now totally serialized! prepare the data to be sent to the server... */
+        var sBoundary, method, url, hash, data, enctype;
+
+        switch (this.technique) {
+            case URLEN_GET:
+                method = "GET";
+                url = this.receiver.split("#");
+                hash = url.length > 1 ? "#" + url.splice(1).join("#") : "";  // preserve the hash
+                url = url[0].replace(/(?:\?.*)?$/, this.segments.length > 0 ? "?" + this.segments.join("&") : "") + hash;
+                data = null;
+                enctype = null;
+                break;
+
+            case URLEN_POST:
+            case PLAIN_POST:
+                method = "POST";
+                url = this.receiver;
+                enctype =  this.contentType;
+                data  = this.segments.join(this.technique === PLAIN_POST ? "\r\n" : "&");
+                break;
+
+            case MULTI_POST:
+                method = "POST";
+                url = this.receiver;
+                if (this.data) {
+                    // use native FormData multipart data
+                    data = this.data;
+                    enctype = null;
+                } else {
+                    // construct serialized multipart data manually
+                    sBoundary = "---------------------------" + Date.now().toString(16);
+                    enctype = "multipart\/form-data; boundary=" + sBoundary;
+                    data = "--" + sBoundary + "\r\n" + this.segments.join("--" + sBoundary + "\r\n") + "--" + sBoundary + "--\r\n";
+                    if (window.Uint8Array) {
+                        data = $.createArrayBuffer(data);
+                    }
+                }
+                break;
+        }
+
+        this.onRequestReady({
+            method: method,
+            action: url,
+            data: data,
+            enctype: enctype
+        });
+    };
+
+    return FormSerialize;
+}({
+    //
+    // private
+    //
+    /**
+     * Used to escape strings for encoding text/plain
+     *
+     * eg. "4\3\7 - Einstein said E=mc2" ----> "4\\3\\7\ -\ Einstein\ said\ E\=mc2"
+     *
+     * @param  {stirng} sText
+     * @return {string}
+     */
+    plainEscape: function (sText) {
+        return sText.replace(/[\s\=\\]/g, "\\$&");
+    },
+
+    /**
+     * @param  {string} str
+     * @return {ArrayBuffer}
+     */
+    createArrayBuffer: function (str) {
+        var nBytes = str.length;
+        var ui8Data = new window.Uint8Array(nBytes);
+        for (var i = 0; i < nBytes; i++) {
+            ui8Data[i] = str.charCodeAt(i) & 0xff;
+        }
+        return ui8Data;
+    },
+}, window.hijinks));
+
+
+/**
+ * Register hijinks delegation event handlers on the document.body
+ */
+window.hijinks.push(function ($, hijinks) {
+    'use strict';
+
+    // handlers:
     function documentClick(_evt) {
         var evt = _evt || window.event;
         var elm = _evt.target || _evt.srcElement;
@@ -23,9 +235,8 @@
         $.browserPopState(evt);
     }
 
-
     /**
-     * Hijinks Body component add listeners to the document body
+     * hijinks event delegation component definition
      */
     return {
         tagName: "body",
@@ -103,6 +314,7 @@
         var partial = pagePartial || elm.hasAttribute("hijinks");
         if (elm.action && partial) {
             evt.preventDefault();
+            // TODO: If there is an error serializing the form, allow event propagation to continue.
             $.processFormData(elm, $.serializedFormHandler(pagePartial));
             return false;
         }
@@ -113,7 +325,7 @@
      *
      * @param {PopStateEvent} e
      */
-    browserPopState: function(evt, elm) {
+    browserPopState: function (evt, elm) {
         'use strict';
         var $ = this;
         if (evt.state && evt.state.hijinks_url) {
@@ -129,10 +341,10 @@
      * Create a callback that will pass a request to hijinks
      *
      * @param  {boolean} pagePartial Flag if this form should be added to browser history
-     * @return {function}            A FormRequestData.onRequestReady callback
+     * @return {function}            A FormSerialize.onRequestReady callback
      */
     serializedFormHandler: function (pagePartial) {
-        return function(form) {
+        return function (form) {
             window.hijinks.request(
                 form.method,
                 form.action,
@@ -152,134 +364,7 @@
     /**
      * Serialize a form data for use in an AJAX request
      */
-    processFormData: (function() {
-        'use strict';
-        /**
-         * adapted from: https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/Using_XMLHttpRequest#Submitting_forms_and_uploading_files
-         *
-         * @private
-         * @constructor
-         */
-        function FormRequestData(oTarget, callback) {
-            var self = this;
-            self.onRequestReady = callback;
-            var nFile, sFieldType, oField, oSegmReq, oFile, bIsPost = oTarget.method.toLowerCase() === "post";
-            this.contentType = bIsPost && oTarget.enctype ? oTarget.enctype : "application\/x-www-form-urlencoded";
-            this.technique = bIsPost ? this.contentType === "multipart\/form-data" ? 3 : this.contentType === "text\/plain" ? 2 : 1 : 0;
-            this.receiver = oTarget.action;
-            this.status = 0;
-            this.segments = [];
-            var fFilter = this.technique === 2 ? _plainEscape : window.escape;
-            for (var nItem = 0; nItem < oTarget.elements.length; nItem++) {
-                oField = oTarget.elements[nItem];
-                if (!oField.hasAttribute("name")) { continue; }
-                sFieldType = oField.nodeName.toUpperCase() === "INPUT" ? oField.getAttribute("type").toUpperCase() : "TEXT";
-                if (sFieldType === "FILE" && oField.files.length > 0) {
-                    if (this.technique === 3) {
-                        if (!window.FileReader) {
-                            throw new Error("Operation not supported: cannot upload a document via AJAX if FileReader is not supported");
-                        }
-                        /* enctype is multipart/form-data */
-                        for (nFile = 0; nFile < oField.files.length; nFile++) {
-                            oFile = oField.files[nFile];
-                            oSegmReq = new window.FileReader();
-                            oSegmReq.onload = this.fileReadHandler();
-                            this.segments.push("Content-Disposition: form-data; name=\"" + oField.name + "\"; filename=\""+ oFile.name + "\"\r\nContent-Type: " + oFile.type + "\r\n\r\n");
-                            this.status++;
-                            oSegmReq.readAsBinaryString(oFile);
-                        }
-                    } else {
-                        /* enctype is application/x-www-form-urlencoded or text/plain or method is GET: files will not be sent! */
-                        for (nFile = 0; nFile < oField.files.length; this.segments.push(fFilter(oField.name) + "=" + fFilter(oField.files[nFile++].name)));
-                    }
-                } else if ((sFieldType !== "RADIO" && sFieldType !== "CHECKBOX") || oField.checked) {
-                    /* field type is not FILE or is FILE but is empty */
-                    this.segments.push(
-                        this.technique === 3 ? /* enctype is multipart/form-data */
-                            "Content-Disposition: form-data; name=\"" + oField.name + "\"\r\n\r\n" + oField.value + "\r\n"
-                        : /* enctype is application/x-www-form-urlencoded or text/plain or method is GET */
-                            fFilter(oField.name) + "=" + fFilter(oField.value)
-                    );
-                }
-            }
-            this.processStatus(this);
-        }
-
-        FormRequestData.prototype = {
-            /**
-             * Create FileReader onload handler
-             *
-             * @return {function}
-             */
-            fileReadHandler: function () {
-                var fdata = this,
-                    index = this.segments.length;
-                return function (oFREvt) {
-                    fdata.segments[index] += oFREvt.target.result + "\r\n";
-                    fdata.status--;
-                    fdata.processStatus();
-                };
-            },
-
-            /**
-             * Is called when a pass of serialization has completed.
-             *
-             * It will be called asynchronously if file reading is taking place.
-             */
-            processStatus: function() {
-                if (this.status > 0) { return; }
-                /* the form is now totally serialized! prepare the data to be sent to the server... */
-                var sBoundary, method, url, hash, data, enctype;
-                if (this.technique === 0) {
-                    /* method is GET */
-                    method = "GET";
-                    url = this.receiver.split("#");
-                    hash = url.length > 1 ? "#" + url.splice(1).join("#") : "";  // preserve the hash
-                    url = url[0].replace(/(?:\?.*)?$/, this.segments.length > 0 ? "?" + this.segments.join("&") : "") + hash;
-                    data = null;
-                    enctype = null;
-                } else {
-                    /* method is POST|... */
-                    method = "POST";
-                    url = this.receiver;
-                    if (this.technique === 3) {
-                        /* enctype is multipart/form-data */
-                        sBoundary = "---------------------------" + Date.now().toString(16);
-                        enctype = "multipart\/form-data; boundary=" + sBoundary;
-                        data = "--" + sBoundary + "\r\n" + this.segments.join("--" + sBoundary + "\r\n") + "--" + sBoundary + "--\r\n";
-                        if (window.Uint8Array) {
-                            data = _createArrayBuffer(data);
-                        }
-                    } else {
-                        /* enctype is application/x-www-form-urlencoded or text/plain */
-                        enctype =  this.contentType;
-                        data  = this.segments.join(this.technique === 2 ? "\r\n" : "&");
-                    }
-                }
-                this.onRequestReady({
-                    method: method,
-                    action: url,
-                    data: data,
-                    enctype: enctype
-                });
-            },
-        };
-
-        function _plainEscape(sText) {
-            /* "4\3\7 - Einstein said E=mc2" ----> "4\\3\\7\ -\ Einstein\ said\ E\=mc2" */
-            return sText.replace(/[\s\=\\]/g, "\\$&");
-        }
-
-        function _createArrayBuffer(sData) {
-            var nBytes = sData.length, ui8Data = new window.Uint8Array(nBytes);
-            for (var nIdx = 0; nIdx < nBytes; nIdx++) {
-                ui8Data[nIdx] = sData.charCodeAt(nIdx) & 0xff;
-            }
-            return ui8Data;
-        }
-
-        return function (formElement, callback) {
-            return new FormRequestData(formElement, callback);
-        };
-    }())
-}));
+    processFormData: function (formElement, callback) {
+        return window.hijinks.FormSerialize(formElement, callback);
+    }
+}, window.hijinks));

@@ -1,4 +1,4 @@
-window.hijinks = (function($, config) {
+window.hijinks = (function ($, config) {
     'use strict';
     var onLoad = $.simpleSignal();
 
@@ -9,12 +9,18 @@ window.hijinks = (function($, config) {
      * @param {Array|Hijinks} setup GA style initialization
      */
     function Hijinks(setup) {
+        var field;
         if (setup instanceof Hijinks) {
             this._setup = setup._setup;
         } else if (setup instanceof Array) {
             this._setup = setup;
         }
         this._setup = (this._setup || []).slice();
+        for (field in this._setup) {
+            if (this._setup.hasOwnProperty(field)) {
+                this[field] = this._setup[field];
+            }
+        }
         $.bindComponentsAsync(this._setup);
     }
 
@@ -22,7 +28,7 @@ window.hijinks = (function($, config) {
      * Add a component definition
      * @param  {Object} def Dict containing component
      */
-    Hijinks.prototype.push = function(def) {
+    Hijinks.prototype.push = function (def) {
         if (def) this._setup.push(def);
         $.bindComponentsAsync(this._setup);
     };
@@ -31,7 +37,7 @@ window.hijinks = (function($, config) {
      * trigger mount event on a node and it's subtree
      * @param  {HTMLElement} el
      */
-    Hijinks.prototype.mount = function(el) {
+    Hijinks.prototype.mount = function (el) {
         $.mount(el);
     };
 
@@ -39,7 +45,7 @@ window.hijinks = (function($, config) {
      * trigger mount event on a node and it's subtree
      * @param  {HTMLElement} el
      */
-    Hijinks.prototype.unmount = function(el) {
+    Hijinks.prototype.unmount = function (el) {
         $.unmount(el);
     };
 
@@ -51,7 +57,7 @@ window.hijinks = (function($, config) {
      * @param  {string} method The request method GET|POST|...
      * @param  {string} url    The url
      */
-    Hijinks.prototype.request = function(method, url, data, encoding) {
+    Hijinks.prototype.request = function (method, url, data, encoding) {
         if ($.METHODS.indexOf(method.toUpperCase()) === -1) {
             throw new Error("Hijinks: Unknown request method '" + method + "'");
         }
@@ -61,7 +67,7 @@ window.hijinks = (function($, config) {
         if (data) {
             req.setRequestHeader('Content-Type', encoding || 'application/x-www-form-urlencoded');
         }
-        req.onload = function() {
+        req.onload = function () {
             $.ajaxSuccess(req);
             onLoad.trigger();
         };
@@ -108,7 +114,7 @@ window.hijinks = (function($, config) {
      *
      * @param {XMLHttpRequest} xhr The xhr instance used to make the request
      */
-    ajaxSuccess: function(xhr) {
+    ajaxSuccess: function (xhr) {
         'use strict';
         var $ = this;
         var i, len, j, temp, child, old, nodes, groupIndex, groupName, group, gfrag;
@@ -187,7 +193,7 @@ window.hijinks = (function($, config) {
      *
      * @param  {HTMLElement} el
      */
-    mount: function(el) {
+    mount: function (el) {
         'use strict';
         var $ = this;
         var i, len, j, name, comps, comp, attr;
@@ -232,7 +238,7 @@ window.hijinks = (function($, config) {
      *
      * @param  {HTMLElement} el
      */
-    unmount: function(el) {
+    unmount: function (el) {
         'use strict';
         var $ = this;
         var i, comp;
@@ -256,7 +262,7 @@ window.hijinks = (function($, config) {
      *
      * @param  {Array} setup List of component definitions
      */
-    bindComponents: function(setup) {
+    bindComponents: function (setup) {
         'use strict';
         var $ = this;
         var def, i, len = setup.length;
@@ -279,13 +285,13 @@ window.hijinks = (function($, config) {
      *
      * @param  {Array} setup List of component definitions
      */
-    bindComponentsAsync: (function() {
+    bindComponentsAsync: (function () {
         'use strict';
         var id = null;
-        return function(setup) {
+        return function (setup) {
             var $ = this;
             $.cancelAnimationFrame(id);
-            id = $.requestAnimationFrame(function() {
+            id = $.requestAnimationFrame(function () {
                 $.bindComponents(setup);
             });
         };
@@ -298,7 +304,7 @@ window.hijinks = (function($, config) {
      * @param  {HTMLElement|DocumentFragment} el
      * @param  {Object} group The group definition taken from the HijinksGroupIndex
      */
-    insertToGroup: function(el, group) {
+    insertToGroup: function (el, group) {
         'use strict';
         var $ = this;
         var toMount, len, i;
@@ -342,7 +348,7 @@ window.hijinks = (function($, config) {
      * Execute the contents of a loaded script element
      * @param  {HTMLScriptElement} el A script element that was loaded by never attached to the DOM
      */
-    insertScript: function(el) {
+    insertScript: function (el) {
         'use strict';
         var script = document.createElement("script");
         script.innerHTML = el.innerHTML;
@@ -361,7 +367,7 @@ window.hijinks = (function($, config) {
      * @param {string} url
      * @return {string} the url with hijinks query parameter added
      */
-    hijinksURL: function(url) {
+    hijinksURL: function (url) {
         'use strict';
         var _url, i, hash, j, query, path;
         try {
@@ -388,7 +394,7 @@ window.hijinks = (function($, config) {
      *
      * see: https://gist.github.com/paulirish/1579671
      */
-    requestAnimationFrame: (function() {
+    requestAnimationFrame: (function () {
         'use strict';
         var requestAnimationFrame = window.requestAnimationFrame;
         var lastTime = 0;
@@ -398,10 +404,10 @@ window.hijinks = (function($, config) {
         }
 
         if (!requestAnimationFrame) {
-            requestAnimationFrame = function(callback, element) {
+            requestAnimationFrame = function (callback, element) {
                 var currTime = new Date().getTime();
                 var timeToCall = Math.max(0, 16 - (currTime - lastTime));
-                var id = window.setTimeout(function() {
+                var id = window.setTimeout(function () {
                         callback(currTime + timeToCall);
                     },
                     timeToCall);
@@ -410,7 +416,7 @@ window.hijinks = (function($, config) {
             };
         }
 
-        return function(cb) {
+        return function (cb) {
             // must be bound to window object
             return requestAnimationFrame.call(window, cb);
         };
@@ -421,7 +427,7 @@ window.hijinks = (function($, config) {
      *
      * see: https://gist.github.com/paulirish/1579671
      */
-    cancelAnimationFrame: (function() {
+    cancelAnimationFrame: (function () {
         'use strict';
         var cancelAnimationFrame = window.cancelAnimationFrame;
         var vendors = ['ms', 'moz', 'webkit', 'o'];
@@ -430,12 +436,12 @@ window.hijinks = (function($, config) {
         }
 
         if (!cancelAnimationFrame) {
-            cancelAnimationFrame = function(id) {
+            cancelAnimationFrame = function (id) {
                 clearTimeout(id);
             };
         }
 
-        return function(cb) {
+        return function (cb) {
             // must be bound to window object
             return cancelAnimationFrame.call(window, cb);
         };
@@ -449,13 +455,13 @@ window.hijinks = (function($, config) {
      * @param  {*}        args...   variadic arguments
      * @returns {Function} Bound function
      */
-    bind: function(fn, self) {
+    bind: function (fn, self) {
         'use strict';
         var args = [].slice.call(arguments, 2);
         if (typeof fn.bind === "function") {
             return fn.bind.apply(fn, [self].concat(args));
         }
-        return function() {
+        return function () {
             args = args.concat([].slice.call(arguments));
             return fn.apply(self, args);
         };
@@ -466,7 +472,7 @@ window.hijinks = (function($, config) {
      *
      * @param  {string} url The url to set as the location href
      */
-    browserNavigate: function(url) {
+    browserNavigate: function (url) {
         'use strict';
         window.location.href = url;
     },
@@ -490,7 +496,7 @@ window.hijinks = (function($, config) {
            this.element = null;
            this.prepend = false;
        }
-       return function(context) {
+       return function (context) {
             var $ = this;
             var HJ_GROUP_REG = /^\s*hijinks-group: ([a-zA-Z][\w-\d]*)( prepend)?\s*$/;
             var index = $.defaultDict(HijinksGroup);
@@ -524,7 +530,7 @@ window.hijinks = (function($, config) {
      * @param   {boolean}     caseInsensitive If true, the case of the keys will be normalized
      * @returns {DefaultDict} Object implementing { get(string)Cons, has(string)bool } interface
      */
-    defaultDict: function(Cons, caseInsensitive) {
+    defaultDict: function (Cons, caseInsensitive) {
         'use strict';
         /**
          * @private
@@ -533,7 +539,7 @@ window.hijinks = (function($, config) {
         function DefaultDict() {
             this._store = {};
         }
-        DefaultDict.prototype.get = function(key) {
+        DefaultDict.prototype.get = function (key) {
             if (typeof key != 'string' || key === '') {
                 throw new Error("DefaultDict: invalid key (" + key + ")");
             }
@@ -548,7 +554,7 @@ window.hijinks = (function($, config) {
                 return (this._store[_key] = new Cons());
             }
         };
-        DefaultDict.prototype.has = function(key) {
+        DefaultDict.prototype.has = function (key) {
             if (typeof key != 'string' || key === '') {
                 throw new Error("DefaultDict: invalid key (" + key + ")");
             }
@@ -566,7 +572,7 @@ window.hijinks = (function($, config) {
      *
      * @return {Object} Object implementing the { add(Function)Function, trigger() } interface
      */
-    simpleSignal: function() {
+    simpleSignal: function () {
         var listeners = [];
         return {
             add: function (f) {
