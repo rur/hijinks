@@ -16,13 +16,13 @@ window.hijinks = (function ($, config) {
             this._setup = setup;
         }
         this._setup = (this._setup || []).slice();
-        for (field in this._setup) {
-            if (this._setup.hasOwnProperty(field)) {
-                this[field] = this._setup[field];
-            }
-        }
         $.bindComponentsAsync(this._setup);
     }
+
+    // setup inheritance for extensions
+    function HijinksProto() {}
+    HijinksProto.prototype = $.extensions;
+    Hijinks.prototype = new HijinksProto();
 
     /**
      * Add a component definition
@@ -93,6 +93,12 @@ window.hijinks = (function ($, config) {
      * @type {DefaultDict}
      */
     bindAttrName: null,
+
+    /**
+     * Hijinks library extensions
+     * @type {Object}
+     */
+    extensions: {},
 
     /**
      * White-list of request methods types
@@ -270,6 +276,9 @@ window.hijinks = (function ($, config) {
         $.bindAttrName = $.defaultDict(Array, true);
         for (i = 0; i < len; i++) {
             def = setup[i];
+            if (def.extensionName && def.hasOwnProperty("extension")) {
+                $.extensions[def.extensionName] = def.extension;
+            }
             if (def.tagName) {
                 $.bindTagName.get(def.tagName.toUpperCase()).push(def);
             }

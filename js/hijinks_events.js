@@ -2,14 +2,14 @@
 window.hijinks = (window.hijinks || []);
 
 /**
- * hijinks.FormSerialize class is used to serialize form input data for XHR
+ * FormSerialize Hijinks extension is used to serialize form input data for XHR
  *
  * The aim is to handle the widest possible variety of methods and browser capabilities.
  * However AJAX file upload will not work without either FileReader or FormData.
  *
  * adapted from: https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/Using_XMLHttpRequest#Submitting_forms_and_uploading_files
  */
-window.hijinks.FormSerialize = (function ($, hijinks) {
+window.hijinks.push(function ($, hijinks) {
     'use strict';
     /**
      * techniques:
@@ -172,7 +172,10 @@ window.hijinks.FormSerialize = (function ($, hijinks) {
         });
     };
 
-    return FormSerialize;
+    return {
+        extensionName: "FormSerialize",
+        extension: FormSerialize
+    };
 }({
     //
     // private
