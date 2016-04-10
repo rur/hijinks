@@ -2,7 +2,7 @@
 window.hijinks = (window.hijinks || []);
 
 /**
- * FormSerialize Hijinks extension is used to serialize form input data for XHR
+ * FormSerializer Hijinks extension is used to serialize form input data for XHR
  *
  * The aim is to handle the widest possible variety of methods and browser capabilities.
  * However AJAX file upload will not work without either FileReader or FormData.
@@ -25,9 +25,9 @@ window.hijinks.push(function ($, hijinks) {
      * @param {FormElement}   elm       The form to be serialized
      * @param {Function}      callback  Called when the serialization is complete (may be sync or async)
      */
-    function FormSerialize(elm, callback) {
-        if (!(this instanceof FormSerialize)) {
-            return new FormSerialize(elm, callback);
+    function FormSerializer(elm, callback) {
+        if (!(this instanceof FormSerializer)) {
+            return new FormSerializer(elm, callback);
         }
 
         var nFile, sFieldType, oField, oSegmReq, oFile;
@@ -106,7 +106,7 @@ window.hijinks.push(function ($, hijinks) {
      *
      * @return {function}
      */
-    FormSerialize.prototype.fileReadHandler = function (field, file) {
+    FormSerializer.prototype.fileReadHandler = function (field, file) {
         var self = this;
         var index = self.segments.length;
         self.segments.push(
@@ -126,7 +126,7 @@ window.hijinks.push(function ($, hijinks) {
      *
      * It will be called asynchronously if file reading is taking place.
      */
-    FormSerialize.prototype.processStatus = function () {
+    FormSerializer.prototype.processStatus = function () {
         if (this.status > 0) { return; }
         /* the form is now totally serialized! prepare the data to be sent to the server... */
         var sBoundary, method, url, hash, data, enctype;
@@ -177,8 +177,8 @@ window.hijinks.push(function ($, hijinks) {
     };
 
     return {
-        extensionName: "FormSerialize",
-        extension: FormSerialize
+        extensionName: "FormSerializer",
+        extension: FormSerializer
     };
 }({
     //
@@ -321,8 +321,8 @@ window.hijinks.push(function ($, hijinks) {
         var partial = pagePartial || elm.hasAttribute("hijinks");
         if (elm.action && partial) {
             evt.preventDefault();
-            // TODO: If there is an error serializing the form, allow event propagation to continue.
-            $.processFormData(elm, $.serializedFormHandler(pagePartial));
+            // TODO: If there is an immediate error serializing the form, allow event propagation to continue.
+            $.serializeFormAndSubmit(elm, pagePartial);
             return false;
         }
     },
@@ -345,33 +345,29 @@ window.hijinks.push(function ($, hijinks) {
     },
 
     /**
-     * Create a callback that will pass a request to hijinks
+     * Serialize HTML form including file inputs and trigger a hijinks request.
      *
-     * @param  {boolean} pagePartial Flag if this form should be added to browser history
-     * @return {function}            A FormSerialize.onRequestReady callback
+     * The request will be triggered asynchronously.
+     *
+     * @param  {boolean} pagePartial    Flag if this form should be added to browser history
      */
-    serializedFormHandler: function (pagePartial) {
-        return function (form) {
-            window.hijinks.request(
-                form.method,
-                form.action,
-                form.data,
-                form.enctype
-            );
+    serializeFormAndSubmit: function (form, pagePartial) {
+        new window.hijinks.FormSerializer(form, function (fdata) {
+            window.setTimeout(function () {
+                window.hijinks.request(
+                    fdata.method,
+                    fdata.action,
+                    fdata.data,
+                    fdata.enctype
+                );
 
-            if (pagePartial && window.history) {
-                window.history.pushState({
-                    hijinks_url: form.action,
-                    partial: true
-                }, "", form.action);
-            }
-        };
-    },
-
-    /**
-     * Serialize a form data for use in an AJAX request
-     */
-    processFormData: function (formElement, callback) {
-        return new window.hijinks.FormSerialize(formElement, callback);
+                if (pagePartial && window.history) {
+                    window.history.pushState({
+                        hijinks_url: fdata.action,
+                        partial: true
+                    }, "", fdata.action);
+                }
+            }, 0);
+        });
     }
 }, window.hijinks));
