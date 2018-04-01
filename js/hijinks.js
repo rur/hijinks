@@ -62,10 +62,10 @@ window.hijinks = (function ($, config) {
             throw new Error("Hijinks: Unknown request method '" + method + "'");
         }
         var req = (XMLHttpRequest) ? new XMLHttpRequest() : new ActiveXObject("MSXML2.XMLHTTP");
-        req.open(method.toUpperCase(), $.hijinksURL(url));
-        req.setRequestHeader("X-Hijinks", "partial", false);
+        req.open(method.toUpperCase(), url, true);
+        req.setRequestHeader("Accept", $.HJ_CONTENT_TYPE);
         if (data) {
-            req.setRequestHeader('Content-Type', encoding || 'application/x-www-form-urlencoded');
+            req.setRequestHeader("Content-Type", encoding || "application/x-www-form-urlencoded");
         }
         req.onload = function () {
             $.ajaxSuccess(req);
@@ -114,6 +114,20 @@ window.hijinks = (function ($, config) {
     SINGLETONS: ['TITLE'],
 
     /**
+     * Content-Type for Hijinks partials
+     *
+     * This will be set as the `Accept` header for Hijinks mediated XHR requests. The
+     * server must respond with the same value as `Content-Type` or a client error result.
+     *
+     * With respect to the media type value, we are taking advantage of the unregistered 'x.' tree while
+     * Hijinks is a proof-of-concept project. Should a stable API emerge at a later point, then registering a personal
+     * or vendor MEME-type would be considered. See https://tools.ietf.org/html/rfc6838#section-3.4
+     *
+     * @type {String}
+     */
+    HJ_CONTENT_TYPE: "application/x.hijinks-html-partial+xml",
+
+    /**
      * XHR onload handler
      *
      * This will convert the response HTML into nodes and
@@ -125,8 +139,8 @@ window.hijinks = (function ($, config) {
         'use strict';
         var $ = this;
         var i, len, j, temp, child, old, nodes, groupIndex, groupName, group, gfrag;
-        if (xhr.getResponseHeader("X-Hijinks") !== "partial") {
-            return;
+        if (xhr.getResponseHeader("content-type") !== $.HJ_CONTENT_TYPE) {
+            throw Error("Content-Type is not supported by Hijinks '" + xhr.getResponseHeader("content-type") + "'")
         }
         temp = document.createElement("div");
         temp.innerHTML = xhr.responseText;
@@ -369,34 +383,6 @@ window.hijinks = (function ($, config) {
             script.src = el.src;
         }
         document.head.appendChild(script);
-    },
-
-    /**
-     * add 'hijinks' query parameter to a url string
-     *
-     * @param {string} url
-     * @return {string} the url with hijinks query parameter added
-     */
-    hijinksURL: function (url) {
-        'use strict';
-        var _url, i, hash, j, query, path;
-        try {
-            _url = url.toString();
-        } catch (e) {
-            return "";
-        }
-        i = _url.indexOf("#");
-        hash = i > -1 ? _url.slice(i + 1) : "";
-        j = _url.indexOf("?");
-        query = j > -1 ? _url.slice(j + 1, (i > -1 ? i : void 0)) : "";
-        path = _url.slice(0, (j > -1 ? j : void 0));
-        if (/(^|&)hijinks(=|&|$)/.test(query)) {
-            return _url;
-        }
-        _url = path + "?" + (query ? query + "&" : "") +
-            "hijinks" +
-            (hash ? "#" + hash : "");
-        return _url;
     },
 
     /**

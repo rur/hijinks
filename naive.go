@@ -18,7 +18,7 @@ func (n *naiveImpl) Handler(path string) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		var templ *Template
-		loadPartial := r.Header.Get("X-Hijinks") == "partial"
+		loadPartial := r.Header.Get("Accept") == ContentType
 		if loadPartial {
 			templ = partial
 		} else {

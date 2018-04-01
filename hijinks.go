@@ -2,6 +2,10 @@ package hijinks
 
 import "net/http"
 
+const (
+	ContentType = "application/x.hijinks-html-partial+xml"
+)
+
 type Template struct {
 	Extends  string
 	Name     string
