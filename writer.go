@@ -86,7 +86,7 @@ func (w *hjResponseWriter) executeTemplate(data interface{}) {
 		// w.partial is set to true if "application/x.hijinks-html-partial+xml" is set as the value of
 		// the `Accept` request header. To fulfill the content negotiation we must now indicate to
 		// the client that the body does indeed contain a hijinks partial as requested.
-		w.Header().Set("Content-Type", HijinksContentType)
+		w.Header().Set("Content-Type", ContentType)
 	}
 	// Since we are modulating the representation based upon a header value, it is
 	// necessary to inform the caches. See https://www.w3.org/Protocols/rfc2616/rfc2616-sec13.html#sec13.6
