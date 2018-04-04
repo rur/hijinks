@@ -2,6 +2,7 @@ package hijinks
 
 import (
 	"net/http"
+	"bytes"
 )
 
 func NewHandler(template string, handlerFunc HandlerFunc) Handler {
@@ -71,29 +72,34 @@ func (h *handlerInternal) GetIncludes() map[Block]Handler {
 
 // Allow the use of hijinks Hander as a HTTP handler
 func (h *handlerInternal) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	isHj := r.Header.Get("Accept") == ContentType
+	isPartial := r.Header.Get("Accept") == ContentType
 
 	root := h.extends
-	if !isHj {
+	if !isPartial {
 		// full page load, execute from the base handler up
 		for root.Container() != nil {
 			root = root.Container().Extends()
 		}
 	}
 
+	var render bytes.Buffer
 	blockMap, templates := resolveTemplatesForHandler(root, h)
-	if success := executeTemplate(isHj, templates, root, blockMap, w, r); !success {
+	if proceed := executeTemplate(isPartial, templates, root, blockMap, w, r, &render); !proceed {
 		return
 	}
 
-	if isHj {
+	if isPartial {
+		// this will execute any includes that have not already been resolved
 		for block, handler := range h.GetIncludes() {
 			if _, found := blockMap[block]; !found {
 				partialBlockMap, partialTempl := resolveTemplatesForHandler(block, handler)
-				if success := executeTemplate(isHj, partialTempl, block, partialBlockMap, w, r); !success {
+				if proceed := executeTemplate(isPartial, partialTempl, block, partialBlockMap, w, r, &render); !proceed {
 					return
 				}
 			}
 		}
 	}
+
+	// write response body from byte buffer
+	render.WriteTo(w)
 }

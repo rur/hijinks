@@ -4,8 +4,6 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
 	"github.com/rur/hijinks"
-	"io/ioutil"
-	"log"
 	"net/http"
 	"path"
 )
@@ -26,8 +24,8 @@ type server struct {
 }
 
 // adds server context to hijinks handlers.
-func (s server) hjHandler(f func(server, hijinks.ResponseWriter, *http.Request)) hijinks.HandlerFunc {
-	return func(w hijinks.ResponseWriter, req *http.Request) {
+func (s server) hjHandler(f func(server, hijinks.ResponseData, *http.Request)) hijinks.HandlerFunc {
+	return func(w hijinks.ResponseData, req *http.Request) {
 		f(s, w, req)
 	}
 }
@@ -39,39 +37,48 @@ func (s server) handler(f func(server, http.ResponseWriter, *http.Request)) http
 	}
 }
 
+type templatePath struct {
+	fsRoot string
+	folder string
+}
+func (t *templatePath) path(file string) string {
+	return path.Join(t.fsRoot, t.folder, file)
+}
+
 // create and configure a new gorilla mux router
 func NewRootHandler(fsRoot string, sessionKey []byte) *RootHandler {
 	r := mux.NewRouter()
 	handler := &RootHandler{Router: r, URL: new(string), FSRoot: fsRoot}
 	store := sessions.NewCookieStore(sessionKey)
 	server := server{router: r, url: handler.URL, fsRoot: fsRoot, store: store}
+	templ := &templatePath{fsRoot, "demo"}
 
-	data, err := ioutil.ReadFile(fsRoot + "/demo/config.yaml")
-	if err != nil {
-		log.Fatalf("Error loading YAML config: %v", err)
-	}
-	renderer, err := hijinks.NewRenderer(hijinks.YAML(data, path.Join(fsRoot, "demo")), func(c hijinks.Configure) error {
-		c.AddHandler("base", server.hjHandler(baseHandler))
-		c.AddHandler("base > content", server.hjHandler(baseSubHandler))
-		c.AddHandler("list", server.hjHandler(listHandler))
-		c.AddHandler("list-item", server.hjHandler(listItemHandler))
-		return nil
-	})
+	base := hijinks.NewHandler(
+		templ.path("base.templ.html"),
+		server.hjHandler(baseHandler),
+	)
+	content := base.DefineBlock("content").
+		WithDefault(
+			templ.path("content.templ.html"),
+			server.hjHandler(baseSubHandler),
+		)
 
-	if err != nil {
-		log.Fatalf("Error configuring renderer: %v", err)
-	}
+	list := content.Default().DefineBlock("list").WithDefault("", server.hjHandler(listHandler))
 
-	r.HandleFunc("/", renderer.Handler("base > content")).
+	listPage := list.Extend(templ.path("list.templ.html"), server.hjHandler(listHandler))
+	listItem := listPage.DefineBlock("list-item")
+	listItemPage := listItem.Extend(templ.path("item.templ.html"), server.hjHandler(listItemHandler))
+
+	r.Handle("/", content.Default()).
 		Methods("GET")
 
-	r.HandleFunc("/list", renderer.Handler("list")).
+	r.Handle("/list", listPage).
 		Methods("GET")
 
 	r.HandleFunc("/list", server.handler(listCreateHandler)).
 		Methods("POST")
 
-	r.HandleFunc("/item/{item_id}", renderer.Handler("list-item")).
+	r.Handle("/item/{item_id}", listItemPage).
 		Methods("GET")
 
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir(path.Join(fsRoot, "js"))))

@@ -80,6 +80,12 @@ func resolveTemplatesForHandler(block Block, primary Handler) (map[Block]Handler
 			templates = append(templates, subTemplates...)
 		}
 	}
+	filtered := templates[:0]
+	for _, templ := range templates {
+		if templ != "" {
+			filtered = append(filtered, templ)
+		}
+	}
 
-	return blockMap, templates
+	return blockMap, filtered
 }

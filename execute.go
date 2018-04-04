@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"regexp"
+	"io"
 )
 
 var (
@@ -17,15 +18,15 @@ func init() {
 	groupName = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9-_]*$`)
 }
 
-func executeTemplate(isPartial bool, templates []string, root Block, handlerMap map[Block]Handler, w http.ResponseWriter, r *http.Request) bool {
+func executeTemplate(isPartial bool, templates []string, root Block, handlerMap map[Block]Handler, resp http.ResponseWriter, r *http.Request, w io.Writer) bool {
 	rootHandler, ok := handlerMap[root]
 	if !ok {
 		// TODO: make sure this level of error handling is correct!
-		http.Error(w, "Root handler was not found!", 500)
+		http.Error(resp, "Root handler was not found!", 500)
 		return false
 	}
 	hw := responseData{
-		ResponseWriter: w,
+		ResponseWriter: resp,
 		handler: rootHandler,
 		handlerMap: handlerMap,
 	}
@@ -60,11 +61,11 @@ func executeTemplate(isPartial bool, templates []string, root Block, handlerMap 
 		// true if "application/x.hijinks-html-partial+xml" is set as the value of
 		// the `Accept` request header. To fulfill the content negotiation we must now indicate to
 		// the client that the body does indeed contain a hijinks partial as requested.
-		w.Header().Set("Content-Type", ContentType)
+		resp.Header().Set("Content-Type", ContentType)
 	}
 	// Since we are modulating the representation based upon a header value, it is
 	// necessary to inform the caches. See https://www.w3.org/Protocols/rfc2616/rfc2616-sec13.html#sec13.6
-	w.Header().Set("Vary", "Accept")
+	resp.Header().Set("Vary", "Accept")
 
 	if err := t.ExecuteTemplate(w, filepath.Base(templates[0]), hw.data); err != nil {
 		log.Fatal(err)
@@ -107,14 +108,18 @@ func (dw *responseData) Delegate(name string, r *http.Request) (interface{}, boo
 	block, ok := dw.handler.GetBlocks()[name]
 	if !ok {
 		// TODO: Add better error logging/handling and make sure this wont cause issues elsewhere!!!
-		http.Error(dw, "unable to delegate to a handler that has not been defined!!!", 500)
+		http.Error(dw, fmt.Sprintf("Unable to delegate to a handler that has not been defined '%s'", name), 500)
 		return nil, false
 	}
 
 	handler, ok := dw.handlerMap[block]
 	if !ok {
 		// TODO: Add better error logging/handling and make sure this wont cause issues elsewhere!!!
-		http.Error(dw, "no handler was matched to block, but delegate WAS called....", 500)
+		http.Error(
+			dw,
+			fmt.Sprintf("No handler was matched to block '%s', but delegate WAS called....", name),
+			500,
+		)
 		return nil, false
 	}
 
