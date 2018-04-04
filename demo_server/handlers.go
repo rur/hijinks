@@ -101,7 +101,7 @@ func listItemHandler(ctx server, w hijinks.ResponseWriter, req *http.Request) {
 	}
 
 	if item.Key == 0 {
-		http.Error(w, fmt.Sprintf("Unable to find item with id '%i'", item_id), 400)
+		http.Error(w, fmt.Sprintf("Unable to find item with id '%v'", item_id), 400)
 		return
 	}
 

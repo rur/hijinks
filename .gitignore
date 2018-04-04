@@ -3,6 +3,8 @@
 *.prof
 *.swp
 *.swo
+.vscode
+.sublime-*
 .DS_Store
 ._*
 local_scripts

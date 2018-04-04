@@ -1,29 +1,15 @@
 package hijinks
 
-import "net/http"
+import (
+	"sort"
+	"net/http"
+)
 
 const (
 	ContentType = "application/x.hijinks-html-partial+xml"
 )
 
-type Template struct {
-	Extends  string
-	Name     string
-	File     string
-	Handler  HandlerFunc
-	Children map[string]*Template
-}
-
-type Pages map[string]Template
-
-type Configure interface {
-	// set the handler associated with a template
-	AddHandler(string, HandlerFunc)
-	// add a new template definition
-	AddPages(Pages)
-}
-
-type ResponseWriter interface {
+type ResponseData interface {
 	http.ResponseWriter
 	// render the template with the supplied data
 	Data(interface{})
@@ -31,13 +17,69 @@ type ResponseWriter interface {
 	Delegate(string, *http.Request) (interface{}, bool)
 }
 
-type HandlerFunc func(ResponseWriter, *http.Request)
+type Block interface {
+	WithDefault(string, HandlerFunc) Block
+	Default() Handler
+	Extend(string, HandlerFunc) Handler
+	Container() Handler
+}
 
-type ConfigFunc func(Configure) error
+type Handler interface {
+	http.Handler
+	Func() HandlerFunc
+	Template() string
+	Extends() Block
+	DefineBlock(string) Block
+	GetBlocks() map[string]Block
+	Includes(...Handler) Handler
+	GetIncludes() map[Block]Handler
+}
 
-type Renderer interface {
-	// generate a hander from a defined template
-	Handler(string) http.HandlerFunc
-	// create a sub renderer with a new configuration
-	Sub(...ConfigFunc) (Renderer, error)
+type HandlerFunc func(ResponseData, *http.Request)
+
+// assemble an index of how each block in the hierarchy is mapped to a handler based upon a 'primary' handler
+func resolveTemplatesForHandler(block Block, primary Handler) (map[Block]Handler, []string) {
+	var handler Handler
+	if primary != nil {
+		if block == primary.Extends() {
+			handler = primary
+		} else if include, found := primary.GetIncludes()[block]; found {
+			handler = include
+		} else if blockDefault := block.Default(); blockDefault != nil {
+			handler = blockDefault
+		}
+	}
+
+	var templates []string
+	var blockMap map[Block]Handler
+
+	if handler != nil {
+		blockMap = map[Block]Handler{
+			block: handler,
+		}
+		templates = []string{
+			handler.Template(),
+		}
+		var subBlockMap map[Block]Handler
+		var subTemplates []string
+		var names []string
+		var childBlock Block
+		blocks := handler.GetBlocks()
+		// sort block names because we want the order of templates to be stable even if it
+		// isn't a total order in general
+		for k := range blocks {
+			names = append(names, k)
+		}
+		sort.Strings(names)
+		for _, name := range names {
+			childBlock = blocks[name]
+			subBlockMap, subTemplates = resolveTemplatesForHandler(childBlock, primary)
+			for childBlock, childHandler := range subBlockMap {
+				blockMap[childBlock] = childHandler
+			}
+			templates = append(templates, subTemplates...)
+		}
+	}
+
+	return blockMap, templates
 }
